@@ -11,30 +11,51 @@ local Economy = shim.require("src/shared/Config/Economy")
 local Layout = shim.require("src/shared/Config/Layout")
 local Stats = shim.require("src/shared/Stats")
 local PadLogic = shim.require("src/shared/PadLogic")
+local Unlocks = shim.require("src/shared/Unlocks")
 
 local MINUTES = tonumber(process.args[1]) or 60
 local SEED = tonumber(process.args[2]) or 1
 math.randomseed(SEED)
 
 local d = {
-	version = 1, coins = 0, stones = 0, tickets = 0, xp = 0, level = 1,
-	zones = { Z1 = true }, gates = {}, pads = {}, fields = { Z1 = { expansion = 0, paid = 0, crop2 = false, crop2Paid = 0 } },
-	workers = {}, gear = {}, enhance = 0,
-	gacha = { freeCount = 0, paidCount = 0, pity = 0 }, passes = {}, boosts = { coinX2Until = 0 },
-	tutorial = 0, daily = { lastChest = 0 },
+	version = 1,
+	coins = 0,
+	stones = 0,
+	tickets = 0,
+	xp = 0,
+	level = 1,
+	zones = { Z1 = true },
+	gates = {},
+	pads = {},
+	fields = { Z1 = { expansion = 0, paid = 0, crop2 = false, crop2Paid = 0 } },
+	workers = {},
+	gear = {},
+	enhance = 0,
+	gacha = { freeCount = 0, paidCount = 0, pity = 0 },
+	passes = {},
+	boosts = { coinX2Until = 0 },
+	tutorial = 0,
+	daily = { lastChest = 0 },
 	stats = { totalCoins = 0, totalHarvest = 0, playtimeSec = 0, enhanceBursts = 0 },
 }
 
 local t = 0
 local log = {}
 local bursts = 0
-local function mark(msg) table.insert(log, ("%5.1fm  %s"):format(t / 60, msg)) end
+local function mark(msg)
+	table.insert(log, ("%5.1fm  %s"):format(t / 60, msg))
+end
 
 -- 가챠 (무료 리깅 포함)
 local function weightedStar()
 	local r = math.random() * 100
 	local acc = 0
-	for star = 1, 4 do acc += Gacha.Weights[star]; if r < acc then return star end end
+	for star = 1, 4 do
+		acc += Gacha.Weights[star]
+		if r < acc then
+			return star
+		end
+	end
 	return 4
 end
 local function pull()
@@ -42,13 +63,19 @@ local function pull()
 	local n = d.gacha.freeCount + 1
 	local star = weightedStar()
 	local rig = Gacha.FreeRig[n]
-	if rig then star = math.max(star, rig.minStar) end
-	if d.gacha.pity >= Gacha.Pity - 1 then star = math.max(star, 3) end
+	if rig then
+		star = math.max(star, rig.minStar)
+	end
+	if d.gacha.pity >= Gacha.Pity - 1 then
+		star = math.max(star, 3)
+	end
 	d.gacha.pity = star >= 3 and 0 or d.gacha.pity + 1
 	local slot = (rig and rig.forceSlot) or Gacha.Slots[math.random(1, 3)]
 	local cur = d.gear[slot]
 	if not cur or star > cur.star then
-		if cur then d.stones += Gacha.Dismantle[cur.star] end
+		if cur then
+			d.stones += Gacha.Dismantle[cur.star]
+		end
 		d.gear[slot] = { star = star }
 		mark(("🎁 #%d %s ★%d 장착"):format(n, slot, star))
 	else
@@ -78,7 +105,9 @@ local function checkLevel()
 		d.tickets += r.tickets
 		d.stones += r.stones
 		mark(("⭐ Lv%d  (+🎫%d +💎%d)  코인 %d"):format(nl, r.tickets, r.stones, d.coins))
-		while d.tickets > 0 do pull() end
+		while d.tickets > 0 do
+			pull()
+		end
 		tryEnhance()
 	end
 end
@@ -107,7 +136,9 @@ local function bestZone()
 		local zdef = Zones.Defs[z]
 		if d.zones[z] and zdef.crops then
 			local price = Crops[zdef.crops[1]].price * (zdef.sellMult or 1)
-			if price > bestPrice then best, bestPrice = z, price end
+			if price > bestPrice then
+				best, bestPrice = z, price
+			end
 		end
 	end
 	return best
@@ -125,7 +156,9 @@ local function trip()
 	local walk = (24 + width * fields) / st.speed
 	-- 재성장 제약: 트립 주기 동안 다시 자라는 작물 수
 	local crops = { zdef.crops[1] }
-	if f.crop2 then table.insert(crops, zdef.crops[2]) end
+	if f.crop2 then
+		table.insert(crops, zdef.crops[2])
+	end
 	local total = 0
 	local harvested = 0
 	local room = st.cap
@@ -139,15 +172,23 @@ local function trip()
 		harvested += take
 		total += take * c.price * (zdef.sellMult or 1)
 	end
-	if harvested == 0 then harvested = 1; total = Crops[crops[1]].price end
+	if harvested == 0 then
+		harvested = 1
+		total = Crops[crops[1]].price
+	end
 	local dt = walk + harvested * st.interval + harvested * Layout.DepositInterval
 	t += dt
 	local income = math.floor(total)
+	d.tutorial = math.max(d.tutorial, 2) -- 수확·판매를 했으므로
 	d.coins += income
 	d.xp += income
 	d.stats.totalCoins += income
 	d.stats.totalHarvest += harvested
-	for _ = 1, harvested do if math.random() < Economy.StoneDropRate then d.stones += 1 end end
+	for _ = 1, harvested do
+		if math.random() < Economy.StoneDropRate then
+			d.stones += 1
+		end
+	end
 	-- 일꾼 수입 (구역별)
 	for z, w in d.workers do
 		local zd = Zones.Defs[z]
@@ -169,13 +210,22 @@ end
 local ALL_PADS = {}
 for _, z in Zones.Order do
 	local zdef = Zones.Defs[z]
-	if z ~= "Z1" then table.insert(ALL_PADS, { id = "Gate:" .. z, zone = z }) end
-	if not zdef.teaser then
-		for key in Layout.zoneValue(z, "Pads") do table.insert(ALL_PADS, { id = key, zone = z }) end
-		table.insert(ALL_PADS, { id = "Expand:" .. z, zone = z })
-		if zdef.crops and zdef.crops[2] then table.insert(ALL_PADS, { id = "Crop2:" .. z, zone = z }) end
-		if zdef.workerMax and zdef.workerMax > 0 then table.insert(ALL_PADS, { id = "Worker:" .. z, zone = z }) end
+	if z ~= "Z1" then
+		table.insert(ALL_PADS, { id = "Gate:" .. z, zone = z })
 	end
+	if not zdef.teaser then
+		table.insert(ALL_PADS, { id = "Expand:" .. z, zone = z })
+		if zdef.crops and zdef.crops[2] then
+			table.insert(ALL_PADS, { id = "Crop2:" .. z, zone = z })
+		end
+		if zdef.workerMax and zdef.workerMax > 0 then
+			table.insert(ALL_PADS, { id = "Worker:" .. z, zone = z })
+		end
+	end
+end
+-- 공용 스탯 패드는 마을에 하나씩만 있다
+for key in Layout.Hub.Pads do
+	table.insert(ALL_PADS, { id = key, zone = "Hub" })
 end
 
 local function pay(pad)
@@ -207,24 +257,35 @@ local function spend()
 		local gateRem = nil
 		for _, pad in ALL_PADS do
 			local info = PadLogic.info(d, pad.id)
-			if info.kind == "Gate" and PadLogic.canPay(info) then
+			if info.kind == "Gate" and PadLogic.canPay(info) and Unlocks.padVisible(d, pad.id, pad.zone) then
 				local rem = PadLogic.remaining(info)
-				if not gateRem or rem < gateRem then gateRem = rem end
+				if not gateRem or rem < gateRem then
+					gateRem = rem
+				end
 			end
 		end
 		local gate, cheapest, cheapRem = nil, nil, math.huge
 		for _, pad in ALL_PADS do
-			if PadLogic.zoneOpen(d, pad.id, pad.zone) and PadLogic.affordable(d, pad.id) then
+			if
+				PadLogic.zoneOpen(d, pad.id, pad.zone)
+				and Unlocks.padVisible(d, pad.id, pad.zone)
+				and PadLogic.affordable(d, pad.id)
+			then
 				local info = PadLogic.info(d, pad.id)
-				if info.kind == "Gate" then gate = gate or pad
+				if info.kind == "Gate" then
+					gate = gate or pad
 				else
 					local rem = PadLogic.remaining(info)
-					if rem < cheapRem and (not gateRem or rem <= gateRem * CHEAP_RATIO) then cheapRem, cheapest = rem, pad end
+					if rem < cheapRem and (not gateRem or rem <= gateRem * CHEAP_RATIO) then
+						cheapRem, cheapest = rem, pad
+					end
 				end
 			end
 		end
 		local pick = gate or cheapest
-		if not pick then return end
+		if not pick then
+			return
+		end
 		pay(pick)
 	end
 end
@@ -244,14 +305,38 @@ end
 print("누적 코인(=XP) 5분 단위: " .. table.concat(cum, "  "))
 
 print(("=== SIM %d min (seed %d) ==="):format(MINUTES, SEED))
-for _, l in log do print(l) end
+for _, l in log do
+	print(l)
+end
 local st = Stats.fromData(d)
-print(("\n최종: Lv%d  ⚡%d  코인 %d (누적 %d)  💎 %d  강화 +%d  폭발 %d회  수확 %d회"):format(d.level, st.power, d.coins, d.stats.totalCoins, d.stones, d.enhance, bursts, d.stats.totalHarvest))
+print(
+	("\n최종: Lv%d  ⚡%d  코인 %d (누적 %d)  💎 %d  강화 +%d  폭발 %d회  수확 %d회"):format(
+		d.level,
+		st.power,
+		d.coins,
+		d.stats.totalCoins,
+		d.stones,
+		d.enhance,
+		bursts,
+		d.stats.totalHarvest
+	)
+)
 local pl = {}
-for k, v in d.pads do table.insert(pl, k .. "=" .. v.level) end
+for k, v in d.pads do
+	table.insert(pl, k .. "=" .. v.level)
+end
 table.sort(pl)
 print("패드: " .. table.concat(pl, " "))
 for _, z in Zones.Order do
 	local f = d.fields[z]
-	if f then print(("%s: 확장 %d, 2번째 작물 %s, 일꾼 %d"):format(z, f.expansion, tostring(f.crop2), d.workers[z] and d.workers[z].count or 0)) end
+	if f then
+		print(
+			("%s: 확장 %d, 2번째 작물 %s, 일꾼 %d"):format(
+				z,
+				f.expansion,
+				tostring(f.crop2),
+				d.workers[z] and d.workers[z].count or 0
+			)
+		)
+	end
 end

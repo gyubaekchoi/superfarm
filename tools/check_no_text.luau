@@ -37,7 +37,7 @@ for _, f in files do
 	local line = 0
 	for l in (fs.readFile(f) .. "\n"):gmatch("(.-)\n") do
 		line += 1
-		for lit in l:gmatch("%.Text%s*=%s*\"([^\"]*)\"") do
+		for lit in l:gmatch('%.Text%s*=%s*"([^"]*)"') do
 			if hasWord(lit) then
 				table.insert(hits, ("%s:%d  %q"):format(f, line, lit))
 			end
@@ -50,7 +50,7 @@ local src = fs.readFile("src/shared/Config/Strings.luau")
 local function keysIn(section: string): { [string]: boolean }
 	local body = src:match("\n\t" .. section .. " = {(.-)\n\t},")
 	local keys = {}
-	for k in (body or ""):gmatch("%[\"([%w%.]+)\"%]") do
+	for k in (body or ""):gmatch('%["([%w%.]+)"%]') do
 		keys[k] = true
 	end
 	return keys
