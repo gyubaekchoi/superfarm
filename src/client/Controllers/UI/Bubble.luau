@@ -3,6 +3,7 @@
 -- 상호작용 가능한 오브젝트(패드·게이트·판매대·허브) 위에 띄워 "여기 뭔가 할 수 있다"를 한눈에 보여준다.
 local TweenService = game:GetService("TweenService")
 local Icon = require(script.Parent.Icon)
+local Theme = require(script.Parent.Theme)
 
 local Bubble = {}
 Bubble.__index = Bubble
@@ -23,9 +24,9 @@ export type Bubble = typeof(setmetatable(
 	Bubble
 ))
 
-local BODY_COLOR = Color3.fromRGB(255, 252, 245)
-local LINE = Color3.fromRGB(52, 40, 70)
-local TITLE_COLOR = Color3.fromRGB(58, 46, 78)
+local BODY_COLOR = Theme.Color.Cream
+local LINE = Theme.Color.Ink
+local TITLE_COLOR = Theme.Color.TextDark
 
 local function corner(inst: GuiObject, r: number)
 	local c = Instance.new("UICorner")
@@ -50,6 +51,7 @@ function Bubble.new(adornee: BasePart, studsOffset: number, maxDistance: number?
 	gui.StudsOffset = Vector3.new(0, studsOffset, 0)
 	gui.AlwaysOnTop = false
 	gui.LightInfluence = 0
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 	gui.MaxDistance = maxDistance or 110
 	gui.Adornee = adornee
 	gui.ResetOnSpawn = false
@@ -80,8 +82,9 @@ function Bubble.new(adornee: BasePart, studsOffset: number, maxDistance: number?
 	body.BackgroundColor3 = BODY_COLOR
 	body.BorderSizePixel = 0
 	body.ZIndex = 2
-	corner(body, 16)
+	corner(body, 18)
 	stroke(body, 3)
+	Theme.shadow(body, 5, 18)
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, 14)
 	pad.PaddingRight = UDim.new(0, 14)
@@ -111,7 +114,7 @@ function Bubble.new(adornee: BasePart, studsOffset: number, maxDistance: number?
 	title.Size = UDim2.fromOffset(0, 30)
 	title.BackgroundTransparency = 1
 	title.Font = Icon.Font
-	title.TextSize = 26
+	title.TextSize = 24
 	title.TextColor3 = TITLE_COLOR
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Text = ""
@@ -122,7 +125,7 @@ function Bubble.new(adornee: BasePart, studsOffset: number, maxDistance: number?
 	badge.LayoutOrder = 3
 	badge.AutomaticSize = Enum.AutomaticSize.X
 	badge.Size = UDim2.fromOffset(0, 26)
-	badge.BackgroundColor3 = Color3.fromRGB(96, 84, 130)
+	badge.BackgroundColor3 = Theme.Color.GoldDeep
 	badge.BorderSizePixel = 0
 	badge.Font = Icon.Font
 	badge.TextSize = 20
@@ -184,7 +187,7 @@ end
 function Bubble.setBadge(self: Bubble, text: string?, color: Color3?)
 	self.badge.Visible = text ~= nil
 	self.badge.Text = text or ""
-	self.badge.BackgroundColor3 = color or Color3.fromRGB(96, 84, 130)
+	self.badge.BackgroundColor3 = color or Theme.Color.GoldDeep
 end
 
 function Bubble.setColor(self: Bubble, color: Color3)
@@ -237,14 +240,14 @@ function Bubble.gauge(self: Bubble, order: number): Frame
 	bg.Name = "Gauge"
 	bg.LayoutOrder = order
 	bg.Size = UDim2.fromOffset(120, 11)
-	bg.BackgroundColor3 = Color3.fromRGB(226, 220, 232)
+	bg.BackgroundColor3 = Theme.Color.CreamDeep
 	bg.BorderSizePixel = 0
 	bg.ZIndex = 3
 	corner(bg, 6)
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
 	fill.Size = UDim2.fromScale(0, 1)
-	fill.BackgroundColor3 = Color3.fromRGB(255, 196, 60)
+	fill.BackgroundColor3 = Theme.Color.Gold
 	fill.BorderSizePixel = 0
 	fill.ZIndex = 4
 	corner(fill, 6)

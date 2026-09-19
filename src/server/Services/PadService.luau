@@ -10,6 +10,7 @@ local Zones = require(Shared.Config.Zones)
 local Pads = require(Shared.Config.Pads)
 local Economy = require(Shared.Config.Economy)
 local PadLogic = require(Shared.PadLogic)
+local Unlocks = require(Shared.Unlocks)
 local Remotes = require(Shared.Remotes)
 local Signal = require(Packages.Signal)
 local PlotService = require(script.Parent.PlotService)
@@ -82,7 +83,7 @@ local function buildGate(rt: PlotRuntime, zone: string, list: { PadRuntime })
 	end
 end
 
--- 구역 패드: 해금 시 생성 (스탯 3~4종, 확장, 2번째 작물, 일꾼)
+-- 구역 패드: 해금 시 생성 (확장·2번째 작물·일꾼). 스탯 패드는 구역이 아니라 마을에 있다.
 function PadService:BuildZonePads(rt: PlotRuntime, zone: string, data: any)
 	local list = padsByPlot[rt.index]
 	for _, pad in list do
@@ -95,10 +96,6 @@ function PadService:BuildZonePads(rt: PlotRuntime, zone: string, data: any)
 		return
 	end
 	local zf = rt.zoneFolders[zone]
-	for key in Layout.zoneValue(zone, "Pads") do
-		local rel = Layout.zoneValue(zone, "Pads")[key]
-		table.insert(list, makePad(rt, key, zone, PlotService.zoneCFrame(rt, zone, rel), PAD_COLORS[key], zf))
-	end
 	table.insert(
 		list,
 		makePad(
@@ -150,10 +147,17 @@ end
 local function buildPads(rt: PlotRuntime)
 	local list: { PadRuntime } = {}
 	padsByPlot[rt.index] = list
+	local hub = rt.folder:FindFirstChild("Hub") or rt.folder
+	-- 구역 게이트 (마을 가장자리)
 	for _, zone in Zones.Order do
 		if zone ~= "Z1" then
 			buildGate(rt, zone, list)
 		end
+	end
+	-- 공용 스탯 패드는 마을 안에 (이동·수확·가방·성장)
+	for key, rel in Layout.Hub.Pads do
+		local cf = rt.origin * CFrame.new(v3(rel) + Vector3.new(0, Layout.GroundY, 0))
+		table.insert(list, makePad(rt, key, "Hub", cf, PAD_COLORS[key], hub))
 	end
 end
 
@@ -252,7 +256,7 @@ local function tickPlot(rt: PlotRuntime, dt: number)
 		if dp.X * dp.X + dp.Z * dp.Z > r2 then
 			continue
 		end
-		if not PadLogic.zoneOpen(d, pad.id, pad.zone) then
+		if not PadLogic.zoneOpen(d, pad.id, pad.zone) or not Unlocks.padVisible(d, pad.id, pad.zone) then
 			continue
 		end
 		local info = PadLogic.info(d, pad.id)

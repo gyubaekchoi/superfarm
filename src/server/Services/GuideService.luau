@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PadLogic = require(Shared.PadLogic)
+local Unlocks = require(Shared.Unlocks)
 local Remotes = require(Shared.Remotes)
 local PlotService = require(script.Parent.PlotService)
 local PadService = require(script.Parent.PadService)
@@ -59,7 +60,7 @@ local function computeTarget(rt: PlotRuntime, owner: Player): { kind: string, ta
 	if rt.full or #rt.stack > 0 and d.tutorial < 2 then
 		local best, bestD = nil, math.huge
 		for zone, stand in rt.sellStands do
-			if d.zones[zone] then
+			if d.zones[zone] and Unlocks.sellVisible(d, zone) then
 				local dist = (stand.Position - root.Position).Magnitude
 				if dist < bestD then
 					bestD, best = dist, stand
@@ -75,11 +76,11 @@ local function computeTarget(rt: PlotRuntime, owner: Player): { kind: string, ta
 		end
 	end
 	-- 2. 티켓 보유 → 광장 🎁
-	if d.tickets > 0 and rt.hub then
+	if d.tickets > 0 and rt.hub and Unlocks.hubVisible(d, "Gacha") then
 		return { kind = "Gacha", target = rt.hub.gacha, icon = "Ticket" }
 	end
 	-- 3. 폭발 강화 가능 → 광장 ⚒️
-	if EnhanceLogic.canBurst(d) and rt.hub then
+	if EnhanceLogic.canBurst(d) and rt.hub and Unlocks.hubVisible(d, "Enhance") then
 		return { kind = "Enhance", target = rt.hub.enhance, icon = "Stone" }
 	end
 	-- 4. 게이트 목표: 레벨 조건을 만족한 다음 게이트가 있으면 잔액이 부족해도 목표로 제시한다 (저축 유도)
@@ -87,7 +88,7 @@ local function computeTarget(rt: PlotRuntime, owner: Player): { kind: string, ta
 	local gatePad, gateRemaining = nil, math.huge
 	local bestPad, bestRemaining = nil, math.huge
 	for _, pad in PadService:GetPads(rt) do
-		if not PadLogic.zoneOpen(d, pad.id, pad.zone) then
+		if not PadLogic.zoneOpen(d, pad.id, pad.zone) or not Unlocks.padVisible(d, pad.id, pad.zone) then
 			continue
 		end
 		local info = PadLogic.info(d, pad.id)
@@ -106,20 +107,27 @@ local function computeTarget(rt: PlotRuntime, owner: Player): { kind: string, ta
 	end
 	if gatePad then
 		if d.coins >= gateRemaining then
-			return { kind = "Gate", target = gatePad.part, icon = "Unlock" }
+			return { kind = "Gate", target = gatePad.part, icon = "Unlock", padId = gatePad.id }
 		end
 		if bestPad and bestRemaining <= gateRemaining * GuideService.CheapPadRatio then
-			return { kind = "Pad", target = bestPad.part, icon = PadLogic.info(d, bestPad.id).icon }
+			return { kind = "Pad", target = bestPad.part, icon = PadLogic.info(d, bestPad.id).icon, padId = bestPad.id }
 		end
 		-- 저축 중: 밭으로 유도하되 마커는 게이트에 (다음 단계에서 화살표만 밭, 마커는 게이트로 분리)
 		local crop = nearestReadyField(rt, root.Position)
 		if crop then
-			return { kind = "Harvest", target = crop, icon = "Sickle", goal = gatePad.part }
+			return {
+				kind = "Harvest",
+				target = crop,
+				icon = "Sickle",
+				goal = gatePad.part,
+				padId = gatePad.id,
+				saving = true,
+			}
 		end
-		return { kind = "Gate", target = gatePad.part, icon = "Lock" }
+		return { kind = "Gate", target = gatePad.part, icon = "Lock", padId = gatePad.id, saving = true }
 	end
 	if bestPad then
-		return { kind = "Pad", target = bestPad.part, icon = PadLogic.info(d, bestPad.id).icon }
+		return { kind = "Pad", target = bestPad.part, icon = PadLogic.info(d, bestPad.id).icon, padId = bestPad.id }
 	end
 	-- 6. 가장 가까운 수확 가능 작물
 	local crop = nearestReadyField(rt, root.Position)

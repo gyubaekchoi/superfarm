@@ -92,25 +92,28 @@ local function part(
 end
 
 local function setupGround()
-	local base = workspace:FindFirstChild("Baseplate")
-	if base and base:IsA("BasePart") then
-		base.Transparency = 1
-		base.CanCollide = true
+	-- 기본 Baseplate 는 윗면이 정확히 Y=0 이라 우리 월드 바닥과 겹쳐 z-fighting(깜박임)을 만든다. 통째로 제거한다.
+	for _, name in { "Baseplate", "SpawnLocation" } do
+		local old = workspace:FindFirstChild(name)
+		if old then
+			old:Destroy()
+		end
 	end
 	local folder = Instance.new("Folder")
 	folder.Name = "World"
 	folder.Parent = workspace
 	-- 넓은 연두 바닥 (플롯·광장 아래)
+	local gridRows = math.ceil(Layout.PlotCount / Layout.GridCols)
 	part(
 		"Ground",
-		Vector3.new(900, 2, 900),
+		Vector3.new(Layout.GridCols * Layout.GridSpacing + 200, 2, gridRows * Layout.GridSpacing + 200),
 		CFrame.new(0, Layout.Y.World - 1, 0),
 		rgb(Models.Ground),
 		Enum.Material.Grass,
 		folder
 	)
 	-- 플롯 격자 사이·바깥 장식 (나무·바위)
-	local rows = math.ceil(Layout.PlotCount / Layout.GridCols)
+	local rows = gridRows
 	local halfW = (Layout.GridCols * Layout.GridSpacing) / 2 + 30
 	local halfH = (rows * Layout.GridSpacing) / 2 + 30
 	local rng = Random.new(42)

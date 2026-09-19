@@ -3,7 +3,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -16,6 +15,8 @@ local StateController = require(script.Parent.StateController)
 local AudioController = require(script.Parent.AudioController)
 local HUDController = require(script.Parent.HUDController)
 local Icon = require(script.Parent.UI.Icon)
+local Theme = require(script.Parent.UI.Theme)
+local Unlocks = require(Shared.Unlocks)
 
 local GachaController = {}
 GachaController.Priority = 15
@@ -76,7 +77,7 @@ local function makeButton(iconName: string, px: number, caption: string): (TextB
 	btn.Text = ""
 	btn.AutoButtonColor = true
 	btn.Size = UDim2.fromOffset(196, px + 16)
-	btn.BackgroundColor3 = Color3.fromRGB(255, 200, 60)
+	btn.BackgroundColor3 = Theme.Color.Gold
 	btn.BorderSizePixel = 0
 	local c = Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, 14)
@@ -134,14 +135,14 @@ local function build()
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	panel.Size = UDim2.fromOffset(420, 520)
-	panel.BackgroundColor3 = Color3.fromRGB(35, 30, 45)
+	panel.BackgroundColor3 = Theme.Color.Cream
 	panel.BorderSizePixel = 0
 	local pc = Instance.new("UICorner")
-	pc.CornerRadius = UDim.new(0, 24)
+	pc.CornerRadius = UDim.new(0, 26)
 	pc.Parent = panel
 	Icon.outline(panel, 3)
 
-	local heading = Icon.label(L("title.Gacha"), 30)
+	local heading = Icon.label(L("title.Gacha"), 30, Theme.Color.TextDark)
 	heading.AnchorPoint = Vector2.new(0.5, 0)
 	heading.Position = UDim2.fromScale(0.5, 0.035)
 	heading.Parent = panel
@@ -202,7 +203,7 @@ local function build()
 	ticketBtn.Parent = btnRow
 	stoneBtn, stoneNum = makeButton("Stone", 36, L("btn.Draw"))
 	stoneBtn.LayoutOrder = 2
-	stoneBtn.BackgroundColor3 = Color3.fromRGB(120, 200, 255)
+	stoneBtn.BackgroundColor3 = Theme.Color.Blue
 	stoneBtn.Parent = btnRow
 	btnRow.Parent = panel
 
@@ -243,7 +244,7 @@ local function build()
 	closeBtn.Size = UDim2.fromOffset(44, 44)
 	closeBtn.AnchorPoint = Vector2.new(1, 0)
 	closeBtn.Position = UDim2.new(1, -10, 0, 10)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(80, 70, 95)
+	closeBtn.BackgroundColor3 = Theme.Color.Red
 	closeBtn.BorderSizePixel = 0
 	local cc = Instance.new("UICorner")
 	cc.CornerRadius = UDim.new(1, 0)
@@ -254,46 +255,26 @@ local function build()
 	x.Parent = closeBtn
 	closeBtn.Parent = panel
 
-	-- HUD 🎁 버튼 (좌하 PC / 좌상 모바일)
-	local hudGui = Instance.new("ScreenGui")
-	hudGui.Name = "GachaHUD"
-	hudGui.ResetOnSpawn = false
-	hudGui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
-	hudGui.Parent = localPlayer:WaitForChild("PlayerGui")
-	hudBtn = Instance.new("TextButton")
-	hudBtn.Name = "GachaButton"
-	hudBtn.Text = ""
-	hudBtn.Size = UDim2.fromOffset(72, 72)
-	if UserInputService.TouchEnabled then
-		hudBtn.AnchorPoint = Vector2.new(0, 0)
-		hudBtn.Position = UDim2.fromOffset(12, 110)
-	else
-		hudBtn.AnchorPoint = Vector2.new(0, 1)
-		hudBtn.Position = UDim2.new(0, 12, 1, -12)
-	end
-	hudBtn.BackgroundColor3 = Color3.fromRGB(35, 30, 45)
-	hudBtn.BackgroundTransparency = 0.3
-	hudBtn.BorderSizePixel = 0
-	local hc = Instance.new("UICorner")
-	hc.CornerRadius = UDim.new(0, 18)
-	hc.Parent = hudBtn
-	Icon.outline(hudBtn, 3)
-	local gift = Icon.new("Gift", 52)
+	-- 하단 네비 바의 🎁 슬롯
+	local slot = HUDController:NavSlot(1)
+	hudBtn = Theme.button("GachaButton", slot, Theme.Color.Gold, 20)
+	hudBtn.Size = UDim2.fromScale(1, 1)
+	local gift = Icon.new("Gift", 48)
 	gift.AnchorPoint = Vector2.new(0.5, 0.5)
 	gift.Position = UDim2.fromScale(0.5, 0.5)
+	gift.ZIndex = 4
 	gift.Parent = hudBtn
-	hudBadge = Icon.number(24, 40)
+	hudBadge = Icon.number(22, 38)
 	hudBadge.AnchorPoint = Vector2.new(1, 0)
 	hudBadge.Position = UDim2.new(1, 6, 0, -6)
 	hudBadge.TextXAlignment = Enum.TextXAlignment.Center
-	hudBadge.BackgroundColor3 = Color3.fromRGB(230, 60, 60)
+	hudBadge.BackgroundColor3 = Theme.Color.Red
 	hudBadge.BackgroundTransparency = 0
 	hudBadge.Size = UDim2.fromOffset(30, 24)
-	local bc = Instance.new("UICorner")
-	bc.CornerRadius = UDim.new(1, 0)
-	bc.Parent = hudBadge
+	hudBadge.ZIndex = 5
+	Theme.pillCorner(hudBadge)
+	Theme.stroke(hudBadge, 2)
 	hudBadge.Parent = hudBtn
-	hudBtn.Parent = hudGui
 end
 
 local function refreshButtons()
@@ -305,12 +286,14 @@ local function refreshButtons()
 	stoneNum.Text = tostring(Gacha.StoneCost)
 	local canTicket = d.tickets > 0 and not busy
 	local canStone = d.stones >= Gacha.StoneCost and not busy
-	ticketBtn.BackgroundColor3 = if canTicket then Color3.fromRGB(255, 200, 60) else Color3.fromRGB(90, 85, 80)
-	stoneBtn.BackgroundColor3 = if canStone then Color3.fromRGB(120, 200, 255) else Color3.fromRGB(90, 85, 80)
+	ticketBtn.BackgroundColor3 = if canTicket then Theme.Color.Gold else Theme.Color.CreamDeep
+	stoneBtn.BackgroundColor3 = if canStone then Theme.Color.Blue else Theme.Color.CreamDeep
 	ticketBtn.Active = canTicket
 	stoneBtn.Active = canStone
 	hudBadge.Visible = d.tickets > 0
 	hudBadge.Text = tostring(d.tickets)
+	-- 해금 전에는 버튼 자체를 숨긴다
+	hudBtn.Visible = Unlocks.hubVisible(d, "Gacha")
 end
 
 local function resetStage()

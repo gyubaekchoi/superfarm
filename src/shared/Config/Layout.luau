@@ -4,21 +4,21 @@ export type V3 = { number }
 
 local Layout = {
 	PlotCount = 6,
-	PlotSize = 200,
+	PlotSize = 180,
 	GridCols = 3,
-	GridSpacing = 230,
-	GroundY = 0.1, -- 오브젝트가 놓이는 기준면 (= 플롯 바닥 윗면)
+	GridSpacing = 200,
+	GroundY = 0.2, -- 오브젝트가 놓이는 기준면 (= 플롯 바닥 윗면, Y.Plot 과 같아야 한다)
 	-- Y 레이어. 같은 높이의 면이 겹치면 z-fighting(카메라가 움직일 때 바닥이 깜박임)이 생긴다.
 	-- 바닥·판·데칼류는 반드시 아래 값만 사용하고, 새 레이어가 필요하면 여기에 추가한다.
 	Y = {
-		World = 0.0, -- 월드 바닥 윗면 (플롯보다 0.1 낮다)
-		Path = 0.06, -- 플롯 사이 통로
-		Plot = 0.1, -- 플롯 바닥 윗면
-		HubRing = { 0.14, 0.18, 0.22 }, -- 허브 동심원 3겹
-		Zone = 0.16, -- 구역 바닥 윗면
-		Tile = 0.32, -- 밭 타일 윗면 (작물이 이 위에 선다)
-		Ring = 0.40, -- 수확 반경 링
-		Dash = 0.52, -- 가이드 화살표 대시
+		World = 0.0, -- 월드 바닥 윗면
+		Path = 0.08, -- 플롯 사이 통로
+		Plot = 0.2, -- 플롯 바닥 윗면 (= GroundY)
+		HubRing = { 0.3, 0.36, 0.42 }, -- 허브 동심원 3겹
+		Zone = 0.32, -- 구역 바닥 윗면
+		Tile = 0.6, -- 밭 타일 윗면 (작물이 이 위에 선다)
+		Ring = 0.75, -- 수확 반경 링
+		Dash = 0.9, -- 가이드 화살표 대시
 	},
 	FieldTileHeight = 0.2,
 	CropSpacing = 4,
@@ -29,41 +29,44 @@ local Layout = {
 	FruitHeight = 5.2,
 	PadSize = { 5, 0.4, 5 },
 
-	-- 관리 허브 (플롯 로컬, 중앙 원점)
+	-- 작은 마을 = 관리 허브 (플롯 로컬, 중앙 원점). 스폰 → 마을 → 밭 순서로 이어진다.
+	-- 이동·수확·가방·성장 패드는 전 구역 공통이므로 구역이 아니라 마을에 둔다.
 	Hub = {
-		Radius = 24,
-		Spawn = { 0, 0, -6 }, -- 북쪽(Z1) 을 바라보고 스폰
-		Gacha = { -14, 0, 4 },
-		Enhance = { 14, 0, 4 },
-		Shop = { 0, 0, 15 },
-		OpenRadius = 4,
+		Radius = 26,
+		Spawn = { 0, 0, 5 }, -- 마을 한복판, 북쪽 밭을 바라본다
+		Gacha = { -11, 0, -11 },
+		Enhance = { 11, 0, -11 },
+		Shop = { 11, 0, 11 },
+		Pads = { Move = { -16, 0, 3 }, Harvest = { -14, 0, 9 }, Cap = { -10, 0, 14 }, Grow = { -3, 0, 17 } },
+		-- 집 {x, y, z, yaw, 지붕색 인덱스}
+		Houses = {
+			{ -19, 0, -19, 0.8, 1 },
+			{ 19, 0, -19, 2.4, 2 },
+			{ 19, 0, 19, 3.9, 3 },
+		},
+		Props = { { -20, 0, -4 }, { 20, 0, 0 }, { 4, 0, 20 } }, -- 통·상자 장식
 		Lamps = 6,
+		OpenRadius = 4,
 	},
 
 	-- 구역 프레임: 허브가 -Z, 구역이 +Z 로 뻗는다. 원점은 허브 중심에서 ZoneDistance 만큼 바깥
-	ZoneDistance = 34,
+	ZoneDistance = 30,
 	Common = {
-		Gate = { 0, 0, -14 }, -- 허브 가장자리 (중심에서 20)
-		Field1 = { 0, 0, 12 },
-		Field2 = { 0, 0, 44 },
-		SellStand = { -18, 0, 6 },
+		Gate = { 0, 0, -7 }, -- 마을 가장자리 (중심에서 23)
+		Field1 = { 0, 0, 6 }, -- 중심에서 36
+		Field2 = { 0, 0, 38 },
+		SellStand = { -16, 0, 2 }, -- 1번 밭에서 16 studs
 		SellStandSize = { 4, 4, 6 },
-		Pads = { Move = { -18, 0, 16 }, Harvest = { -18, 0, 20 }, Cap = { -18, 0, 24 } },
-		ExpandPad = { 18, 0, 6 },
-		Crop2Pad = { 0, 0, 44 },
-		WorkerPad = { 18, 0, 14 },
-		FloorSize = { 60, 0.2, 70 },
-		FloorCenter = { 0, 0, 26 },
-		Decor = { { 24, 0, 54 }, { -24, 0, 54 }, { 26, 0, 30 } }, -- 구역 안쪽 장식 위치
+		ExpandPad = { 16, 0, 2 },
+		Crop2Pad = { 0, 0, 38 },
+		WorkerPad = { 16, 0, 12 },
+		FloorSize = { 50, 0.2, 60 },
+		FloorCenter = { 0, 0, 24 },
+		Decor = { { 22, 0, 44 }, { -22, 0, 44 }, { -22, 0, 20 } },
 	},
 	Zone = {
 		Z1 = { yaw = math.pi }, -- 북
-		Z2 = {
-			yaw = math.pi / 2,
-			SellStandSize = { 8, 5, 4 },
-			Pads = { Move = { -18, 0, 16 }, Harvest = { -18, 0, 20 }, Cap = { -18, 0, 24 }, Grow = { -18, 0, 28 } },
-			Windmill = { -26, 0, 48 },
-		}, -- 동
+		Z2 = { yaw = math.pi / 2, SellStandSize = { 8, 5, 4 }, Windmill = { -22, 0, 40 } }, -- 동
 		Z3 = { yaw = 0 }, -- 남
 		Z4 = { yaw = -math.pi / 2 }, -- 서 (티저)
 	},
@@ -119,13 +122,9 @@ function Layout.pos(zone: string, key: string): V3
 	return Layout.rel(zone, Layout.zoneValue(zone, key))
 end
 
-function Layout.padPos(zone: string, padKey: string): V3?
-	local pads = Layout.zoneValue(zone, "Pads")
-	local r = pads and pads[padKey]
-	if not r then
-		return nil
-	end
-	return Layout.rel(zone, r)
+-- 마을 공용 스탯 패드 위치 (플롯 로컬)
+function Layout.hubPadPos(padKey: string): V3?
+	return Layout.Hub.Pads[padKey]
 end
 
 -- 플롯 i 의 월드 중심 (3×2 격자)

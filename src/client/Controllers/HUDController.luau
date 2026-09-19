@@ -1,119 +1,170 @@
 --!strict
--- 아이콘 전용 HUD: ⭐Lv+XP바 / ⚡파워 / 💰코인 / 💎강화석. DevSpec §11-1.
+-- HUD: 상단 레벨·XP 캡슐, 그 아래 "지금 할 일" 튜토리얼 배너, 우상 지갑, 하단 네비 바. DevSpec §11-1.
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Economy = require(Shared.Config.Economy)
 local EnhanceLogic = require(Shared.EnhanceLogic)
+local Remotes = require(Shared.Remotes)
+local L = require(Shared.Util.L)
 local StateController = require(script.Parent.StateController)
 local Icon = require(script.Parent.UI.Icon)
+local Theme = require(script.Parent.UI.Theme)
 local NumberRoller = require(script.Parent.UI.NumberRoller)
+local PadText = require(script.Parent.UI.PadText)
 
 local HUDController = {}
 HUDController.Priority = 20
 
+local C = Theme.Color
+local localPlayer = Players.LocalPlayer
+
 local gui: ScreenGui
 local rollers: { [string]: NumberRoller.Roller } = {}
-local xpBar: Frame
 local slots: { [string]: GuiObject } = {}
+local xpFill: Frame
+local xpText: TextLabel
+local levelText: TextLabel
+local goalIconHolder: Frame
+local goalIcon: GuiObject
+local goalIconName = ""
+local goalText: TextLabel
+local goalScale: UIScale
+local anvilBadge: GuiObject
+local nav: Frame
 
-local PX = 34
-local PAD = 12
 local powerHold = false
 local pendingPower: number? = nil
-local anvilBadge: GuiObject
-local anvilPulse = 0
+local pulse = 0
+local lastGoal: any = nil
 
-local function panel(name: string, anchor: Vector2, pos: UDim2): Frame
-	local f = Instance.new("Frame")
-	f.Name = name
-	f.AnchorPoint = anchor
-	f.Position = pos
-	f.AutomaticSize = Enum.AutomaticSize.XY
-	f.BackgroundColor3 = Color3.fromRGB(64, 52, 92)
-	f.BackgroundTransparency = 0.15
-	f.BorderSizePixel = 0
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, 14)
-	c.Parent = f
-	Icon.outline(f, 3)
-	local p = Instance.new("UIPadding")
-	p.PaddingLeft = UDim.new(0, 10)
-	p.PaddingRight = UDim.new(0, 12)
-	p.PaddingTop = UDim.new(0, 6)
-	p.PaddingBottom = UDim.new(0, 6)
-	p.Parent = f
-	local l = Instance.new("UIListLayout")
-	l.FillDirection = Enum.FillDirection.Vertical
-	l.Padding = UDim.new(0, 4)
-	l.Parent = f
-	f.Parent = gui
-	return f
+local PAD = 12
+
+-- 상단: ⭐ 레벨 배지 + XP 캡슐
+local function buildLevelRow(parent: Instance): Frame
+	local row = Instance.new("Frame")
+	row.Name = "LevelRow"
+	row.LayoutOrder = 1
+	row.Size = UDim2.fromOffset(330, 54)
+	row.BackgroundTransparency = 1
+	row.ZIndex = 2
+
+	local bar, fill, text = Theme.progress("Xp", row, 296, 40)
+	bar.Position = UDim2.fromOffset(34, 7)
+	bar.ZIndex = 2
+	xpFill, xpText = fill, text
+
+	local star = Instance.new("Frame")
+	star.Name = "Star"
+	star.Size = UDim2.fromOffset(56, 56)
+	star.BackgroundTransparency = 1
+	star.ZIndex = 5
+	local si = Icon.new("Star", 56)
+	si.ZIndex = 5
+	si.Parent = star
+	levelText = Theme.text("1", 24, C.TextDark)
+	levelText.AutomaticSize = Enum.AutomaticSize.None
+	levelText.Size = UDim2.fromScale(1, 1)
+	levelText.Position = UDim2.fromOffset(0, 2)
+	levelText.TextXAlignment = Enum.TextXAlignment.Center
+	levelText.ZIndex = 6
+	levelText.Parent = star
+	star.Parent = row
+	slots.Star = star
+
+	row.Parent = parent
+	return row
 end
 
-local function statRow(parent: Instance, iconName: string, px: number, width: number, short: boolean): TextLabel
+-- 상단 둘째 줄: 지금 할 일 (튜토리얼 배너)
+local function buildGoal(parent: Instance): Frame
+	local card = Theme.card("Goal", parent, C.Cream, 18)
+	card.LayoutOrder = 2
+	card.AutomaticSize = Enum.AutomaticSize.XY
+	card.ZIndex = 2
+	Theme.padding(card, 16, 8)
+	Theme.list(card, false, 1)
+	goalScale = Instance.new("UIScale")
+	goalScale.Parent = card
+
+	local caption = Theme.text(L("goal.Title"), 15, C.InkSoft, false)
+	caption.LayoutOrder = 1
+	caption.ZIndex = 3
+	caption.Parent = card
+
+	local body = Icon.row("Body", 34)
+	body.LayoutOrder = 2
+	goalIconHolder = body
+	goalIcon = Icon.new("Sickle", 34)
+	goalIcon.LayoutOrder = 1
+	goalIcon.Parent = body
+	goalText = Theme.text("", 24, C.TextDark, false)
+	goalText.LayoutOrder = 2
+	goalText.ZIndex = 3
+	goalText.Parent = body
+	body.Parent = card
+	return card
+end
+
+-- 우상 지갑
+local function walletRow(parent: Instance, iconName: string, px: number, order: number, short: boolean)
 	local row = Icon.row("Row_" .. iconName, px)
+	row.LayoutOrder = order
 	local ic = Icon.new(iconName, px)
 	ic.LayoutOrder = 1
 	ic.Parent = row
-	local num = Icon.number(px, width)
+	local num = Icon.number(px, 104)
 	num.LayoutOrder = 2
 	num.Parent = row
 	row.Parent = parent
 	slots[iconName] = ic
 	rollers[iconName] = NumberRoller.new(num, short)
-	return num
 end
 
 local function build()
-	gui = Instance.new("ScreenGui")
-	gui.Name = "HUD"
-	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = false
-	gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
-	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	gui = Theme.screen("HUD", localPlayer:WaitForChild("PlayerGui"), 10)
 
-	-- 좌상: ⭐ Lv + XP 바
-	local left = panel("Level", Vector2.new(0, 0), UDim2.fromOffset(PAD, PAD))
-	statRow(left, "Star", PX, 70, false)
-	local barBg = Instance.new("Frame")
-	barBg.Name = "XPBar"
-	barBg.Size = UDim2.fromOffset(240, 14)
-	barBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-	barBg.BorderSizePixel = 0
-	local bc = Instance.new("UICorner")
-	bc.CornerRadius = UDim.new(1, 0)
-	bc.Parent = barBg
-	xpBar = Instance.new("Frame")
-	xpBar.Name = "Fill"
-	xpBar.Size = UDim2.fromScale(0, 1)
-	xpBar.BackgroundColor3 = Color3.fromRGB(255, 210, 60)
-	xpBar.BorderSizePixel = 0
-	local fc = Instance.new("UICorner")
-	fc.CornerRadius = UDim.new(1, 0)
-	fc.Parent = xpBar
-	xpBar.Parent = barBg
-	barBg.Parent = left
+	local top = Instance.new("Frame")
+	top.Name = "Top"
+	top.AnchorPoint = Vector2.new(0.5, 0)
+	top.Position = UDim2.new(0.5, 0, 0, PAD)
+	top.AutomaticSize = Enum.AutomaticSize.XY
+	top.Size = UDim2.fromOffset(0, 0)
+	top.BackgroundTransparency = 1
+	top.ZIndex = 2
+	Theme.list(top, false, 10)
+	top.Parent = gui
+	buildLevelRow(top)
+	buildGoal(top)
 
-	-- 중앙 상단: ⚡
-	local center = panel("Power", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, PAD))
-	statRow(center, "Bolt", 44, 120, false)
-
-	-- 우상: 💰 / 💎
-	local right = panel("Wallet", Vector2.new(1, 0), UDim2.new(1, -PAD, 0, PAD))
-	statRow(right, "Coin", PX, 130, true)
-	statRow(right, "Stone", 28, 110, true)
-	-- 💎 옆 ⚒️ 미니 배지: 폭발 강화 가능할 때만 표시·펄스
+	local wallet = Theme.darkCard("Wallet", gui, 18)
+	wallet.AnchorPoint = Vector2.new(1, 0)
+	wallet.Position = UDim2.new(1, -PAD, 0, PAD)
+	wallet.AutomaticSize = Enum.AutomaticSize.XY
+	Theme.padding(wallet, 14, 8)
+	local wl = Theme.list(wallet, false, 3)
+	wl.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	walletRow(wallet, "Coin", 30, 1, true)
+	walletRow(wallet, "Stone", 28, 2, true)
+	walletRow(wallet, "Bolt", 28, 3, false)
 	anvilBadge = Icon.new("Anvil", 24)
 	anvilBadge.LayoutOrder = 3
 	anvilBadge.Visible = false
-	anvilBadge.Parent = right:FindFirstChild("Row_Stone")
-end
+	anvilBadge.Parent = wallet:FindFirstChild("Row_Stone")
 
-local function refreshAnvil(d: any)
-	local active = EnhanceLogic.canBurst(d)
-	anvilBadge.Visible = active
+	nav = Instance.new("Frame")
+	nav.Name = "Nav"
+	nav.AnchorPoint = Vector2.new(0.5, 1)
+	nav.Position = UDim2.new(0.5, 0, 1, -PAD)
+	nav.AutomaticSize = Enum.AutomaticSize.X
+	nav.Size = UDim2.fromOffset(0, 78)
+	nav.BackgroundTransparency = 1
+	nav.ZIndex = 2
+	Theme.list(nav, true, 12)
+	nav.Parent = gui
 end
 
 local function refreshXP(d: any)
@@ -121,15 +172,44 @@ local function refreshXP(d: any)
 	local cur = Economy.LevelXP[lv] or 0
 	local nxt = Economy.LevelXP[lv + 1]
 	local frac = if nxt then math.clamp((d.xp - cur) / (nxt - cur), 0, 1) else 1
-	xpBar.Size = UDim2.fromScale(frac, 1)
+	xpFill.Size = UDim2.fromScale(frac, 1)
+	levelText.Text = tostring(lv)
+	xpText.Text = if nxt then ("%d / %d"):format(math.max(0, d.xp - cur), nxt - cur) else L("pad.Max")
+end
+
+local function refreshAnvil(d: any)
+	anvilBadge.Visible = EnhanceLogic.canBurst(d)
 end
 
 local function refreshAll(d: any, instant: boolean)
-	rollers.Star:set(d.level, instant)
 	rollers.Coin:set(d.coins, instant)
 	rollers.Stone:set(d.stones, instant)
 	refreshXP(d)
 	refreshAnvil(d)
+end
+
+local function setGoal(msg: any)
+	local d = StateController:Get()
+	if not d then
+		return
+	end
+	lastGoal = msg
+	local iconName, text = PadText.goal(d, msg)
+	if iconName ~= goalIconName then
+		local old = goalIcon
+		goalIcon = Icon.new(iconName, 34)
+		goalIcon.LayoutOrder = 1
+		goalIcon.Parent = goalIconHolder
+		goalIconName = iconName
+		old:Destroy()
+	end
+	if goalText.Text ~= text then
+		goalText.Text = text
+		goalScale.Scale = 1.15
+		TweenService
+			:Create(goalScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+			:Play()
+	end
 end
 
 function HUDController:Start()
@@ -140,6 +220,9 @@ function HUDController:Start()
 	end
 	StateController.Loaded:Connect(function(data)
 		refreshAll(data, true)
+		if lastGoal then
+			setGoal(lastGoal)
+		end
 	end)
 	StateController.Changed:Connect(function(path)
 		local data = StateController:Get()
@@ -152,7 +235,6 @@ function HUDController:Start()
 			rollers.Stone:set(data.stones)
 			refreshAnvil(data)
 		elseif path == "level" then
-			rollers.Star:set(data.level)
 			refreshXP(data)
 			refreshAnvil(data)
 		elseif path == "xp" then
@@ -168,21 +250,30 @@ function HUDController:Start()
 			rollers.Bolt:set(c.power)
 		end
 	end)
-	game:GetService("RunService").Heartbeat:Connect(function(dt)
+	local c = StateController:GetStats()
+	if c then
+		rollers.Bolt:set(c.power, true)
+	end
+	Remotes.get("GuideTarget").OnClientEvent:Connect(setGoal)
+
+	RunService.Heartbeat:Connect(function(dt)
+		pulse += dt
 		if anvilBadge.Visible then
-			anvilPulse += dt
 			local sc = anvilBadge:FindFirstChildOfClass("UIScale")
 			if not sc then
 				sc = Instance.new("UIScale")
 				sc.Parent = anvilBadge
 			end
-			sc.Scale = 1 + 0.15 * math.sin(anvilPulse * 6)
+			sc.Scale = 1 + 0.15 * math.sin(pulse * 6)
 		end
+		-- 목표 아이콘이 천천히 숨쉬어 시선을 끈다
+		local gs = goalIcon:FindFirstChildOfClass("UIScale")
+		if not gs then
+			gs = Instance.new("UIScale")
+			gs.Parent = goalIcon
+		end
+		gs.Scale = 1 + 0.08 * math.sin(pulse * 3.2)
 	end)
-	local c = StateController:GetStats()
-	if c then
-		rollers.Bolt:set(c.power, true)
-	end
 end
 
 -- 연출 동기화: 강화 연출 중 ⚡ 롤링을 보류하고, 해제 시 최신 값으로 롤링
@@ -199,13 +290,25 @@ function HUDController:HoldPower(hold: boolean, duration: number?)
 	end
 end
 
--- 다른 컨트롤러가 HUD 슬롯 화면 위치를 얻을 때 (레벨업 보상 비행 목표)
+-- 보상 아이콘이 날아갈 HUD 목표 지점
 function HUDController:SlotPosition(iconName: string): Vector2?
-	local s = slots[iconName]
+	local s = slots[iconName] or slots.Coin
 	if not s then
 		return nil
 	end
 	return s.AbsolutePosition + s.AbsoluteSize / 2
+end
+
+-- 하단 네비 바 슬롯. 다른 컨트롤러가 버튼을 여기에 넣는다.
+function HUDController:NavSlot(order: number): Frame
+	local f = Instance.new("Frame")
+	f.Name = "Slot" .. order
+	f.LayoutOrder = order
+	f.Size = UDim2.fromOffset(74, 74)
+	f.BackgroundTransparency = 1
+	f.ZIndex = 2
+	f.Parent = nav
+	return f
 end
 
 function HUDController:Gui(): ScreenGui

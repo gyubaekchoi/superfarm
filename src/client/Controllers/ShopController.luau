@@ -13,6 +13,9 @@ local L = require(Shared.Util.L)
 local StateController = require(script.Parent.StateController)
 local AudioController = require(script.Parent.AudioController)
 local Icon = require(script.Parent.UI.Icon)
+local Theme = require(script.Parent.UI.Theme)
+local HUDController = require(script.Parent.HUDController)
+local Unlocks = require(Shared.Unlocks)
 
 local ShopController = {}
 ShopController.Priority = 15
@@ -78,7 +81,7 @@ local function card(
 	btn.Text = ""
 	btn.LayoutOrder = order
 	btn.Size = UDim2.fromOffset(120, 150)
-	btn.BackgroundColor3 = if isPass then Color3.fromRGB(60, 50, 90) else Color3.fromRGB(45, 60, 80)
+	btn.BackgroundColor3 = if isPass then Theme.Color.Violet else Theme.Color.Blue
 	btn.BorderSizePixel = 0
 	local c = Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, 16)
@@ -154,14 +157,14 @@ local function build()
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	panel.Size = UDim2.fromOffset(720, 440)
-	panel.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+	panel.BackgroundColor3 = Theme.Color.Cream
 	panel.BorderSizePixel = 0
 	local pc = Instance.new("UICorner")
 	pc.CornerRadius = UDim.new(0, 24)
 	pc.Parent = panel
 	Icon.outline(panel, 3)
 
-	local heading = Icon.label(L("title.Shop"), 28)
+	local heading = Icon.label(L("title.Shop"), 28, Theme.Color.TextDark)
 	heading.AnchorPoint = Vector2.new(0, 0)
 	heading.Position = UDim2.fromOffset(24, 12)
 	heading.TextXAlignment = Enum.TextXAlignment.Left
@@ -206,7 +209,7 @@ local function build()
 	closeBtn.Size = UDim2.fromOffset(44, 44)
 	closeBtn.AnchorPoint = Vector2.new(1, 0)
 	closeBtn.Position = UDim2.new(1, -10, 0, 10)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(80, 70, 95)
+	closeBtn.BackgroundColor3 = Theme.Color.Red
 	closeBtn.BorderSizePixel = 0
 	local cc = Instance.new("UICorner")
 	cc.CornerRadius = UDim.new(1, 0)
@@ -217,30 +220,15 @@ local function build()
 	x.Parent = closeBtn
 	closeBtn.Parent = panel
 
-	-- HUD 🛒 (우하)
-	local hudGui = Instance.new("ScreenGui")
-	hudGui.Name = "ShopHUD"
-	hudGui.ResetOnSpawn = false
-	hudGui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
-	hudGui.Parent = localPlayer:WaitForChild("PlayerGui")
-	hudBtn = Instance.new("TextButton")
-	hudBtn.Name = "ShopButton"
-	hudBtn.Text = ""
-	hudBtn.Size = UDim2.fromOffset(72, 72)
-	hudBtn.AnchorPoint = Vector2.new(1, 1)
-	hudBtn.Position = UDim2.new(1, -12, 1, -12)
-	hudBtn.BackgroundColor3 = Color3.fromRGB(35, 30, 45)
-	hudBtn.BackgroundTransparency = 0.3
-	hudBtn.BorderSizePixel = 0
-	local hc = Instance.new("UICorner")
-	hc.CornerRadius = UDim.new(0, 18)
-	hc.Parent = hudBtn
-	Icon.outline(hudBtn, 3)
-	local cart = Icon.new("Shop", 52)
+	-- 하단 네비 바의 🛒 슬롯
+	local slot = HUDController:NavSlot(2)
+	hudBtn = Theme.button("ShopButton", slot, Theme.Color.Blue, 20)
+	hudBtn.Size = UDim2.fromScale(1, 1)
+	local cart = Icon.new("Shop", 48)
 	cart.AnchorPoint = Vector2.new(0.5, 0.5)
 	cart.Position = UDim2.fromScale(0.5, 0.5)
+	cart.ZIndex = 4
 	cart.Parent = hudBtn
-	hudBtn.Parent = hudGui
 end
 
 local function refresh()
@@ -248,6 +236,7 @@ local function refresh()
 	if not d then
 		return
 	end
+	hudBtn.Visible = Unlocks.hubVisible(d, "Shop")
 	local restricted = localPlayer:GetAttribute("PaidRandomRestricted") == true
 	for key, def in Products.Passes do
 		local c = cards[key]

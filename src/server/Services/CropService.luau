@@ -69,7 +69,7 @@ local function makeTile(rt: PlotRuntime, zone: string, name: string, centerLocal
 	local tile = basePart("Tile_" .. name, rt.zoneFolders[zone])
 	tile.Size = Vector3.new(w, tileH, l)
 	tile.CFrame = rt.origin
-		* CFrame.new(centerLocal + Vector3.new(0, Layout.GroundY + tileH / 2, 0))
+		* CFrame.new(centerLocal + Vector3.new(0, Layout.Y.Tile - tileH / 2, 0))
 		* CFrame.Angles(0, Layout.yaw(zone), 0)
 	local theme = Models.ZoneTheme[zone]
 	tile.Color = if theme

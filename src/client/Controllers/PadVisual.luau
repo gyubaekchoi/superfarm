@@ -8,10 +8,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PadLogic = require(Shared.PadLogic)
-local Zones = require(Shared.Config.Zones)
+local Unlocks = require(Shared.Unlocks)
 local Remotes = require(Shared.Remotes)
 local Format = require(Shared.Util.Format)
 local L = require(Shared.Util.L)
+local PadText = require(script.Parent.UI.PadText)
 local StateController = require(script.Parent.StateController)
 local AudioController = require(script.Parent.AudioController)
 local RadiusVisual = require(script.Parent.RadiusVisual)
@@ -20,7 +21,7 @@ local Bubble = require(script.Parent.UI.Bubble)
 local PadVisual = {}
 PadVisual.Priority = 35
 
-type PadUI = { part: BasePart, id: string, zone: string, bubble: Bubble.Bubble, baseColor: Color3 }
+type PadUI = { part: BasePart, id: string, zone: string, bubble: Bubble.Bubble, baseColor: Color3, shown: boolean }
 local pads: { [BasePart]: PadUI } = {}
 local localPlayer = Players.LocalPlayer
 
@@ -31,22 +32,6 @@ local BUBBLE_OFF = Color3.fromRGB(226, 222, 230)
 
 local function isMine(part: BasePart): boolean
 	return part:GetAttribute("Plot") == localPlayer:GetAttribute("Plot")
-end
-
--- 패드 제목: 아이콘 옆에 함께 표기해 무엇을 사는 패드인지 바로 알게 한다.
-local function titleOf(info: PadLogic.PadInfo): string
-	if info.kind == "Stat" then
-		return L("pad." .. info.key)
-	elseif info.kind == "Expand" then
-		return L("pad.Expand")
-	elseif info.kind == "Crop2" then
-		local crops = Zones.Defs[info.key].crops
-		local second = crops and crops[2]
-		return L("pad.Crop2", second and L("crop." .. second) or "")
-	elseif info.kind == "Worker" then
-		return L("pad.Worker")
-	end
-	return L("pad.Gate", L("zone." .. info.key))
 end
 
 local function badgeOf(info: PadLogic.PadInfo): (string?, Color3?)
@@ -71,14 +56,24 @@ local function refresh(ui: PadUI, paid: number?, cost: number?)
 	local info = PadLogic.info(d, ui.id)
 	local done = ui.part:GetAttribute("Done") == true
 	local zoneOpen = PadLogic.zoneOpen(d, ui.id, ui.zone)
-	if done or not zoneOpen then
+	-- 해금 전에는 아예 보이지 않는다 (처음부터 버튼을 다 늘어놓지 않기 위해)
+	local unlocked = Unlocks.padVisible(d, ui.id, ui.zone)
+	if done or not zoneOpen or not unlocked then
 		ui.bubble:setEnabled(false)
-		ui.part.Transparency = if done then 1 else 0
+		ui.part.Transparency = 1
+		ui.part.CanQuery = false
+		ui.shown = false
 		return
 	end
 	ui.part.Transparency = 0
+	ui.part.CanQuery = true
+	if not ui.shown then
+		ui.shown = true
+		ui.bubble:pop()
+		AudioController:Play("PadComplete", 1.3, 0.4)
+	end
 	ui.bubble:setEnabled(true)
-	ui.bubble:setHeader(info.icon, titleOf(info))
+	ui.bubble:setHeader(info.icon, PadText.fromInfo(info))
 	local badgeText, badgeColor = badgeOf(info)
 	ui.bubble:setBadge(badgeText, badgeColor)
 
@@ -107,7 +102,7 @@ local function refresh(ui: PadUI, paid: number?, cost: number?)
 
 	if info.teaser then
 		reqRow.Visible = true
-		ui.bubble:setHeader("Construction", titleOf(info))
+		ui.bubble:setHeader("Construction", PadText.fromInfo(info))
 		reqText.Text = L("req.Soon")
 	elseif not info.levelOk then
 		reqRow.Visible = true
@@ -146,6 +141,7 @@ local function track(part: BasePart)
 		zone = part:GetAttribute("Zone") :: string,
 		bubble = bubble,
 		baseColor = part.Color,
+		shown = false,
 	}
 	pads[part] = ui
 	part:GetAttributeChangedSignal("Done"):Connect(function()
@@ -155,7 +151,6 @@ local function track(part: BasePart)
 		pads[part] = nil
 	end)
 	refresh(ui)
-	bubble:pop()
 end
 
 local function byId(id: string): { PadUI }
@@ -258,6 +253,7 @@ function PadVisual:Start()
 			or path:sub(1, 7) == "workers"
 			or path:sub(1, 5) == "zones"
 			or path:sub(1, 5) == "gates"
+			or path == "tutorial"
 		then
 			refreshAll()
 		end

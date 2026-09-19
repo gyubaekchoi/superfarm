@@ -56,6 +56,16 @@ local Strings = {
 		["title.Odds"] = "확률",
 		["title.Power"] = "파워",
 		["title.Owned"] = "보유 중",
+		["goal.Title"] = "지금 할 일",
+		["goal.Harvest"] = "작물에 다가가 수확하기",
+		["goal.Sell"] = "작물을 판매대로 가져가기",
+		["goal.Gacha"] = "상자 열어보기",
+		["goal.Enhance"] = "장비 강화하기",
+		["goal.Pad"] = "%s 사기",
+		["goal.Gate"] = "%s 열기",
+		["goal.Save"] = "코인 모으기",
+		["goal.Idle"] = "작물이 자라는 중",
+		["unlock.New"] = "새로 열렸어요",
 	},
 
 	en = {
@@ -108,6 +118,16 @@ local Strings = {
 		["title.Odds"] = "Odds",
 		["title.Power"] = "Power",
 		["title.Owned"] = "Owned",
+		["goal.Title"] = "Your next step",
+		["goal.Harvest"] = "Walk into crops to harvest",
+		["goal.Sell"] = "Take crops to the stand",
+		["goal.Gacha"] = "Open the lucky box",
+		["goal.Enhance"] = "Upgrade your gear",
+		["goal.Pad"] = "Buy %s",
+		["goal.Gate"] = "Open %s",
+		["goal.Save"] = "Save up coins",
+		["goal.Idle"] = "Crops are growing",
+		["unlock.New"] = "New!",
 	},
 }
 

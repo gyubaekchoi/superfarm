@@ -186,11 +186,96 @@ local function hubObject(
 	return part
 end
 
+-- 작은 마을: 흙빛 광장 + 집 3채 + 가로등 + 통·상자. 스폰 → 마을 → 밭으로 이어진다.
+local function buildHouse(rt: PlotRuntime, parent: Instance, spec: { number })
+	local pos = Vector3.new(spec[1], spec[2], spec[3])
+	local yaw = spec[4]
+	local roof = Models.HouseRoof[spec[5]] or Models.HouseRoof[1]
+	local base = rt.origin * CFrame.new(pos + Vector3.new(0, Layout.GroundY, 0)) * CFrame.Angles(0, yaw, 0)
+	local house = Instance.new("Model")
+	house.Name = "House"
+
+	local W, D, H = 9, 8, 6
+	local wall = makePart("Wall", Vector3.new(W, H, D), base * CFrame.new(0, H / 2, 0), rgb(Models.HouseWall), house)
+	wall.CanCollide = true
+	wall.Material = Enum.Material.WoodPlanks
+	-- 모서리 기둥
+	for _, sx in { -1, 1 } do
+		for _, sz in { -1, 1 } do
+			local beam = makePart(
+				"Beam",
+				Vector3.new(0.8, H, 0.8),
+				base * CFrame.new(sx * (W / 2 - 0.3), H / 2, sz * (D / 2 - 0.3)),
+				rgb(Models.HouseBeam),
+				house
+			)
+			beam.CanCollide = false
+		end
+	end
+	-- 박공 지붕 (쐐기 두 장). 쐐기의 수직면이 용마루 쪽을 보도록 ±90° 돌린다.
+	local roofH, half = 3.2, 5.4
+	for _, sx in { -1, 1 } do
+		local w = Instance.new("WedgePart")
+		w.Name = "Roof"
+		w.Size = Vector3.new(D + 1.6, roofH, half)
+		w.CFrame = base * CFrame.new(sx * (half / 2), H + roofH / 2, 0) * CFrame.Angles(0, -sx * math.pi / 2, 0)
+		w.Anchored = true
+		w.CanCollide = false
+		w.Color = rgb(roof)
+		w.Material = Enum.Material.SmoothPlastic
+		w.Parent = house
+	end
+	-- 문·창문
+	local door = makePart(
+		"Door",
+		Vector3.new(2.6, 4, 0.3),
+		base * CFrame.new(0, 2, -(D / 2 + 0.05)),
+		rgb(Models.HouseBeam),
+		house
+	)
+	door.CanCollide = false
+	for _, sx in { -1, 1 } do
+		local win = makePart(
+			"Window",
+			Vector3.new(2, 2, 0.3),
+			base * CFrame.new(sx * 3.2, 4.6, -(D / 2 + 0.05)),
+			Color3.fromRGB(255, 226, 150),
+			house
+		)
+		win.CanCollide = false
+		win.Material = Enum.Material.Neon
+	end
+	house.Parent = parent
+end
+
+local function buildProp(rt: PlotRuntime, parent: Instance, pos: { number }, i: number)
+	local base = rt.origin * CFrame.new(Vector3.new(pos[1], Layout.GroundY, pos[3]))
+	if i % 2 == 1 then
+		local barrel =
+			makePart("Barrel", Vector3.new(2.4, 3, 2.4), base * CFrame.new(0, 1.5, 0), rgb(Models.Barrel), parent)
+		barrel.Shape = Enum.PartType.Cylinder
+		barrel.CFrame = base * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, 0, math.pi / 2)
+		barrel.CanCollide = false
+	else
+		for k = 0, 1 do
+			local crate = makePart(
+				"Crate",
+				Vector3.new(2.6, 2.6, 2.6),
+				base * CFrame.new(k * 0.6, 1.3 + k * 2.6, k * 0.4) * CFrame.Angles(0, k * 0.5, 0),
+				rgb(Models.HouseBeam),
+				parent
+			)
+			crate.CanCollide = false
+		end
+	end
+end
+
 local function buildHub(rt: PlotRuntime)
 	local H = Layout.Hub
 	local hub = Instance.new("Folder")
 	hub.Name = "Hub"
 	hub.Parent = rt.folder
+
 	local RING_THICK = 0.3
 	local function ring(name, radius, top, color)
 		local f = makePart(
@@ -201,19 +286,28 @@ local function buildHub(rt: PlotRuntime)
 			hub
 		)
 		f.Shape = Enum.PartType.Cylinder
+		f.Material = Enum.Material.Ground
 		f.CanCollide = false
 	end
 	ring("Floor", H.Radius, Layout.Y.HubRing[1], rgb(Models.PlazaFloor))
-	ring("Ring1", H.Radius * 0.66, Layout.Y.HubRing[2], Color3.fromRGB(226, 206, 160))
-	ring("Ring2", H.Radius * 0.33, Layout.Y.HubRing[3], rgb(Models.PlazaFloor))
+	ring("Ring1", H.Radius * 0.72, Layout.Y.HubRing[2], rgb(Models.PlazaRing))
+	ring("Ring2", H.Radius * 0.34, Layout.Y.HubRing[3], rgb(Models.PlazaInner))
+
+	for _, spec in H.Houses do
+		buildHouse(rt, hub, spec)
+	end
+	for i, pos in H.Props do
+		buildProp(rt, hub, pos, i)
+	end
+
 	for i = 1, H.Lamps do
 		local a = i / H.Lamps * math.pi * 2 + math.pi / H.Lamps
-		local pos = Vector3.new(math.cos(a), 0, math.sin(a)) * (H.Radius - 3)
+		local pos = Vector3.new(math.cos(a), 0, math.sin(a)) * (H.Radius - 2)
 		local post = makePart(
 			"LampPost",
 			Vector3.new(0.5, 7, 0.5),
 			rt.origin * CFrame.new(pos + Vector3.new(0, Layout.GroundY + 3.5, 0)),
-			Color3.fromRGB(70, 70, 90),
+			rgb(Models.HouseBeam),
 			hub
 		)
 		post.CanCollide = false
@@ -221,18 +315,19 @@ local function buildHub(rt: PlotRuntime)
 			"LampBulb",
 			Vector3.new(1.4, 1.4, 1.4),
 			rt.origin * CFrame.new(pos + Vector3.new(0, Layout.GroundY + 7.4, 0)),
-			Color3.fromRGB(255, 230, 150),
+			Color3.fromRGB(255, 220, 140),
 			hub
 		)
 		bulb.Shape = Enum.PartType.Ball
 		bulb.Material = Enum.Material.Neon
 		bulb.CanCollide = false
 		local light = Instance.new("PointLight")
-		light.Range = 16
-		light.Brightness = 0.6
-		light.Color = Color3.fromRGB(255, 230, 170)
+		light.Range = 18
+		light.Brightness = 0.9
+		light.Color = Color3.fromRGB(255, 214, 150)
 		light.Parent = bulb
 	end
+
 	rt.hub = {
 		gacha = hubObject(rt, hub, "GachaBox", "Gacha", H.Gacha, Vector3.new(4, 3.2, 4), Color3.fromRGB(235, 80, 110)),
 		enhance = hubObject(

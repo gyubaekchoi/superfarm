@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local EnhanceLogic = require(Shared.EnhanceLogic)
+local Unlocks = require(Shared.Unlocks)
 local Gacha = require(Shared.Config.Gacha)
 local L = require(Shared.Util.L)
 local StateController = require(script.Parent.StateController)
@@ -15,7 +16,7 @@ local Bubble = require(script.Parent.UI.Bubble)
 local InteractVisual = {}
 InteractVisual.Priority = 34
 
-type Entry = { part: BasePart, kind: string, bubble: Bubble.Bubble, alert: boolean }
+type Entry = { part: BasePart, kind: string, bubble: Bubble.Bubble, alert: boolean, shown: boolean, visual: Instance? }
 local entries: { [BasePart]: Entry } = {}
 local localPlayer = Players.LocalPlayer
 
@@ -55,9 +56,36 @@ local function kindOf(part: BasePart): string?
 	return nil
 end
 
+-- 해금 전에는 논리 파트와 시각 모델을 함께 숨긴다
+local function setShown(e: Entry, on: boolean)
+	if e.shown == on then
+		return
+	end
+	e.shown = on
+	e.bubble:setEnabled(on)
+	if e.visual then
+		for _, d in (e.visual :: Instance):GetDescendants() do
+			if d:IsA("BasePart") then
+				d.Transparency = if on then 0 else 1
+				d.CanCollide = on
+			end
+		end
+	end
+	if on then
+		e.bubble:pop()
+	end
+end
+
 local function refresh(e: Entry)
 	local d = StateController:Get()
 	if not d then
+		return
+	end
+	local visible = if e.kind == "Sell"
+		then Unlocks.sellVisible(d, (e.part:GetAttribute("Zone") :: string?) or "Z1")
+		else Unlocks.hubVisible(d, e.kind)
+	setShown(e, visible)
+	if not visible then
 		return
 	end
 	local alert = false
@@ -107,13 +135,18 @@ local function track(part: BasePart)
 	local height = part.Size.Y + 2.2
 	local bubble = Bubble.new(part, height)
 	bubble.gui.Parent = part
-	local e: Entry = { part = part, kind = kind, bubble = bubble, alert = false }
+	local visual: Instance? = nil
+	if kind == "Sell" then
+		visual = part.Parent and part.Parent:FindFirstChild("SellStandVisual")
+	else
+		visual = part.Parent and part.Parent:FindFirstChild(kind .. "Visual")
+	end
+	local e: Entry = { part = part, kind = kind, bubble = bubble, alert = false, shown = true, visual = visual }
 	entries[part] = e
 	part.Destroying:Connect(function()
 		entries[part] = nil
 	end)
 	refresh(e)
-	bubble:pop()
 end
 
 local function trackAll()
@@ -148,7 +181,14 @@ function InteractVisual:Start()
 		refreshAll()
 	end)
 	StateController.Changed:Connect(function(path: string)
-		if path == "tickets" or path == "stones" or path == "enhance" or path == "level" then
+		if
+			path == "tickets"
+			or path == "stones"
+			or path == "enhance"
+			or path == "level"
+			or path == "tutorial"
+			or path:sub(1, 6) == "fields"
+		then
 			refreshAll()
 		end
 	end)

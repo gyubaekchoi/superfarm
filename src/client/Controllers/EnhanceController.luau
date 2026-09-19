@@ -18,6 +18,7 @@ local AudioController = require(script.Parent.AudioController)
 local HUDController = require(script.Parent.HUDController)
 local GearVisual = require(script.Parent.GearVisual)
 local Icon = require(script.Parent.UI.Icon)
+local Theme = require(script.Parent.UI.Theme)
 
 local EnhanceController = {}
 EnhanceController.Priority = 15
@@ -107,7 +108,7 @@ local function build()
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	panel.Size = UDim2.fromOffset(420, 540)
-	panel.BackgroundColor3 = Color3.fromRGB(40, 36, 48)
+	panel.BackgroundColor3 = Theme.Color.Cream
 	panel.BorderSizePixel = 0
 	local pc = Instance.new("UICorner")
 	pc.CornerRadius = UDim.new(0, 24)
@@ -122,7 +123,7 @@ local function build()
 	local anvil = Icon.new("Anvil", 44)
 	anvil.LayoutOrder = 1
 	anvil.Parent = top
-	local topTitle = Icon.label(L("title.Enhance"), 30)
+	local topTitle = Icon.label(L("title.Enhance"), 30, Theme.Color.TextDark)
 	topTitle.LayoutOrder = 2
 	topTitle.Parent = top
 	levelNum = Icon.number(44, 110)
@@ -172,7 +173,7 @@ local function build()
 	holdBtn.AnchorPoint = Vector2.new(0.5, 0)
 	holdBtn.Position = UDim2.fromScale(0.5, 0.66)
 	holdBtn.Size = UDim2.fromOffset(300, 74)
-	holdBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 60)
+	holdBtn.BackgroundColor3 = Theme.Color.Gold
 	holdBtn.BorderSizePixel = 0
 	local hc = Instance.new("UICorner")
 	hc.CornerRadius = UDim.new(0, 20)
@@ -254,7 +255,7 @@ local function build()
 	closeBtn.Size = UDim2.fromOffset(44, 44)
 	closeBtn.AnchorPoint = Vector2.new(1, 0)
 	closeBtn.Position = UDim2.new(1, -10, 0, 10)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(80, 70, 95)
+	closeBtn.BackgroundColor3 = Theme.Color.Red
 	closeBtn.BorderSizePixel = 0
 	local cc = Instance.new("UICorner")
 	cc.CornerRadius = UDim.new(1, 0)
@@ -316,7 +317,7 @@ local function refresh()
 	local levels, spent = Enhance.previewLevels(d.stones, d.enhance)
 	local active = EnhanceLogic.canBurst(d) and not busy
 	holdNum.Text = "+" .. levels
-	holdBtn.BackgroundColor3 = if active then Color3.fromRGB(255, 200, 60) else Color3.fromRGB(95, 90, 100)
+	holdBtn.BackgroundColor3 = if active then Theme.Color.Gold else Theme.Color.CreamDeep
 	holdBtn.Active = active
 	needRow.Visible = not active and not busy
 	if not active then

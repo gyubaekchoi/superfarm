@@ -96,7 +96,7 @@ end
 -- 이 패드가 속한 구역이 열려 있는가 (게이트는 항상 true)
 function PadLogic.zoneOpen(d: Types.PlayerData, padId: string, zone: string): boolean
 	local kind = PadLogic.parse(padId)
-	if kind == "Gate" then
+	if kind == "Gate" or zone == "Hub" then
 		return true
 	end
 	return d.zones[zone] == true
