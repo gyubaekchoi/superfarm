@@ -109,46 +109,54 @@ local function setupGround()
 		Enum.Material.Grass,
 		folder
 	)
-	-- 광장 → 각 플롯 스폰 길
-	local n = Layout.PlotCount
-	for i = 1, n do
-		local theta = (i - 1) / n * math.pi * 2
-		local dir = Vector3.new(math.sin(theta), 0, math.cos(theta))
-		local from = Layout.Plaza.Radius - 4
-		local to = Layout.PlotRingRadius - Layout.PlotSize / 2 + 30
-		local len = to - from
-		local mid = dir * (from + len / 2)
-		local path = part(
+	-- 플롯 격자 사이·바깥 장식 (나무·바위)
+	local rows = math.ceil(Layout.PlotCount / Layout.GridCols)
+	local halfW = (Layout.GridCols * Layout.GridSpacing) / 2 + 30
+	local halfH = (rows * Layout.GridSpacing) / 2 + 30
+	local rng = Random.new(42)
+	for i = 1, 70 do
+		local side = i % 4
+		local x, z
+		if side == 0 then
+			x, z = rng:NextNumber(-halfW, halfW), -halfH - rng:NextNumber(0, 20)
+		elseif side == 1 then
+			x, z = rng:NextNumber(-halfW, halfW), halfH + rng:NextNumber(0, 20)
+		elseif side == 2 then
+			x, z = -halfW - rng:NextNumber(0, 20), rng:NextNumber(-halfH, halfH)
+		else
+			x, z = halfW + rng:NextNumber(0, 20), rng:NextNumber(-halfH, halfH)
+		end
+		local list = if i % 3 == 0 then Models.Decor.Rocks else Models.Decor.Trees
+		local name = list[(i % #list) + 1]
+		Templates.spawn(
+			name,
+			CFrame.new(x, Layout.GroundY, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0),
+			folder
+		)
+	end
+	-- 플롯 사이 통로 (모래색)
+	for c = 1, Layout.GridCols - 1 do
+		local x = (c - Layout.GridCols / 2) * Layout.GridSpacing
+		local pth = part(
 			"Path",
-			Vector3.new(7, 0.3, len),
-			CFrame.lookAt(
-				mid + Vector3.new(0, Layout.GroundY + 0.02, 0),
-				mid + dir + Vector3.new(0, Layout.GroundY + 0.02, 0)
-			),
+			Vector3.new(Layout.GridSpacing - Layout.PlotSize, 0.4, rows * Layout.GridSpacing),
+			CFrame.new(x, Layout.GroundY + 0.02, 0),
 			rgb(Models.Path),
 			Enum.Material.SmoothPlastic,
 			folder
 		)
-		path.CanCollide = false
-		-- 길 옆 장식 (나무·바위 교대)
-		for k = 1, 3 do
-			local along = from + len * (k / 4)
-			local side = Vector3.new(-dir.Z, 0, dir.X)
-			for _, sgn in { -1, 1 } do
-				local pos = dir * along + side * (7 * sgn) + Vector3.new(0, Layout.GroundY, 0)
-				local list = if (k + (sgn > 0 and 1 or 0)) % 2 == 0 then Models.Decor.Trees else Models.Decor.Rocks
-				local name = list[((i + k) % #list) + 1]
-				Templates.spawn(name, CFrame.new(pos) * CFrame.Angles(0, (i * 7 + k) * 0.9, 0), folder)
-			end
-		end
+		pth.CanCollide = false
 	end
-	-- 바깥 둘레 나무 띠
-	local ringR = Layout.PlotRingRadius + Layout.PlotSize / 2 + 18
-	for i = 1, 36 do
-		local a = i / 36 * math.pi * 2
-		local pos = Vector3.new(math.cos(a), 0, math.sin(a)) * (ringR + (i % 3) * 6) + Vector3.new(0, Layout.GroundY, 0)
-		local name = Models.Decor.Trees[(i % #Models.Decor.Trees) + 1]
-		Templates.spawn(name, CFrame.new(pos) * CFrame.Angles(0, a * 3, 0), folder)
+	if rows > 1 then
+		local pth = part(
+			"Path",
+			Vector3.new(Layout.GridCols * Layout.GridSpacing, 0.4, Layout.GridSpacing - Layout.PlotSize),
+			CFrame.new(0, Layout.GroundY + 0.02, 0),
+			rgb(Models.Path),
+			Enum.Material.SmoothPlastic,
+			folder
+		)
+		pth.CanCollide = false
 	end
 end
 

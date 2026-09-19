@@ -22,6 +22,16 @@ local EnhanceController = {}
 EnhanceController.Priority = 15
 
 local localPlayer = Players.LocalPlayer
+
+-- 내 플롯의 허브 오브젝트 (해금 여부 무관, 항상 존재)
+local function hubPart(name: string): BasePart?
+	local plotIdx = localPlayer:GetAttribute("Plot")
+	local plots = workspace:FindFirstChild("Plots")
+	local pf = plotIdx and plots and plots:FindFirstChild("Plot" .. tostring(plotIdx))
+	local hub = pf and pf:FindFirstChild("Hub")
+	local part = hub and hub:FindFirstChild(name)
+	return part :: BasePart?
+end
 local gui: ScreenGui
 local panel: Frame
 local flash: Frame
@@ -576,8 +586,7 @@ local function ensureStationGui(): BillboardGui?
 	if stationGui and stationGui.Parent then
 		return stationGui
 	end
-	local plaza = workspace:FindFirstChild("Plaza")
-	local station = plaza and plaza:FindFirstChild("EnhanceStation")
+	local station = hubPart("EnhanceStation")
 	if not station then
 		return nil
 	end
@@ -635,13 +644,12 @@ local function updateProximity()
 	local d = StateController:Get()
 	local char = localPlayer.Character
 	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local plaza = workspace:FindFirstChild("Plaza")
-	local station = plaza and plaza:FindFirstChild("EnhanceStation") :: BasePart?
+	local station = hubPart("EnhanceStation")
 	if not d or not root or not station then
 		return
 	end
 	local dp = station.Position - root.Position
-	local near = dp.X * dp.X + dp.Z * dp.Z <= Layout.Plaza.OpenRadius ^ 2
+	local near = dp.X * dp.X + dp.Z * dp.Z <= Layout.Hub.OpenRadius ^ 2
 	if near and not nearStation and EnhanceLogic.unlocked(d) then
 		EnhanceController:Open()
 	end

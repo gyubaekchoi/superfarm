@@ -23,10 +23,10 @@
 | Worker_Robot | 절차 생성 | 둥근 몸통·안테나·네온 배 |
 | Sky | 528506487 Cartoon Skybox | Lighting.Sky (ID 는 Config/Assets.luau) |
 
-울타리는 템플릿 대신 코드에서 흰 말뚝 울타리를 생성한다(플롯당 약 214파트). 미해금 구역 안개는 흰 구름 구체 14개 + 바닥 흐림으로 표현.
+울타리는 템플릿 대신 코드에서 흰 말뚝 울타리를 생성한다(플롯당 약 214파트). 미해금 구역은 아예 생성하지 않으며 허브 가장자리 게이트 🔒만 보인다 (지도 v2).
 
 ## 조명·후처리 (`WorldService`)
-ClockTime 13.5, Brightness 2.6, Atmosphere(0.16), Bloom(0.55/28/1.4), ColorCorrection(채도 +0.22, 대비 +0.08), SunRays(0.07). 바닥은 Grass 재질 연두, 광장은 크림색 동심원 포장 + 가로등 6.
+ClockTime 13.5, Brightness 2.6, Atmosphere(0.16), Bloom(0.55/28/1.4), ColorCorrection(채도 +0.22, 대비 +0.08), SunRays(0.07). 바닥은 Grass 재질 연두, 플롯 중앙 허브는 크림색 동심원 포장 + 가로등 6.
 
 ## UI 아이콘 (`assets/icons/*.png`, 256px)
 `tools/gen_icons.py` 로 생성한 플랫 아이콘 36종(두꺼운 남보라 외곽선). 업로드된 28종의 ID 는 `Config/Assets.luau` 에 기록.

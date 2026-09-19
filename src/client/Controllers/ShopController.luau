@@ -17,6 +17,16 @@ local ShopController = {}
 ShopController.Priority = 15
 
 local localPlayer = Players.LocalPlayer
+
+-- 내 플롯의 허브 오브젝트 (해금 여부 무관, 항상 존재)
+local function hubPart(name: string): BasePart?
+	local plotIdx = localPlayer:GetAttribute("Plot")
+	local plots = workspace:FindFirstChild("Plots")
+	local pf = plotIdx and plots and plots:FindFirstChild("Plot" .. tostring(plotIdx))
+	local hub = pf and pf:FindFirstChild("Hub")
+	local part = hub and hub:FindFirstChild(name)
+	return part :: BasePart?
+end
 local gui: ScreenGui
 local panel: Frame
 local passRow: Frame
@@ -277,13 +287,12 @@ end
 local function updateProximity()
 	local char = localPlayer.Character
 	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local plaza = workspace:FindFirstChild("Plaza")
-	local kiosk = plaza and plaza:FindFirstChild("ShopKiosk") :: BasePart?
+	local kiosk = hubPart("ShopKiosk")
 	if not root or not kiosk then
 		return
 	end
 	local dp = kiosk.Position - root.Position
-	local near = dp.X * dp.X + dp.Z * dp.Z <= Layout.Plaza.OpenRadius ^ 2
+	local near = dp.X * dp.X + dp.Z * dp.Z <= Layout.Hub.OpenRadius ^ 2
 	if near and not nearKiosk then
 		ShopController:Open()
 	end

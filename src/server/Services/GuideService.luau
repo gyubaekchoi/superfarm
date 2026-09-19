@@ -7,7 +7,6 @@ local PadLogic = require(Shared.PadLogic)
 local Remotes = require(Shared.Remotes)
 local PlotService = require(script.Parent.PlotService)
 local PadService = require(script.Parent.PadService)
-local PlazaService = require(script.Parent.PlazaService)
 local EnhanceLogic = require(Shared.EnhanceLogic)
 local HarvestService = require(script.Parent.HarvestService)
 local SellService = require(script.Parent.SellService)
@@ -76,12 +75,12 @@ local function computeTarget(rt: PlotRuntime, owner: Player): { kind: string, ta
 		end
 	end
 	-- 2. 티켓 보유 → 광장 🎁
-	if d.tickets > 0 and PlazaService.GachaBox then
-		return { kind = "Gacha", target = PlazaService.GachaBox, icon = "Ticket" }
+	if d.tickets > 0 and rt.hub then
+		return { kind = "Gacha", target = rt.hub.gacha, icon = "Ticket" }
 	end
 	-- 3. 폭발 강화 가능 → 광장 ⚒️
-	if EnhanceLogic.canBurst(d) and PlazaService.EnhanceStation then
-		return { kind = "Enhance", target = PlazaService.EnhanceStation, icon = "Stone" }
+	if EnhanceLogic.canBurst(d) and rt.hub then
+		return { kind = "Enhance", target = rt.hub.enhance, icon = "Stone" }
 	end
 	-- 4. 게이트 목표: 레벨 조건을 만족한 다음 게이트가 있으면 잔액이 부족해도 목표로 제시한다 (저축 유도)
 	--    단, 아주 싼 패드(게이트 잔액의 20% 이하)는 계속 안내한다.

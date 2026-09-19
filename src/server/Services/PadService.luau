@@ -26,6 +26,7 @@ PadService.ZoneUnlocked = Signal.new() -- (player, rt, zone)
 
 local padsByPlot: { [number]: { PadRuntime } } = {}
 local v3 = PlotService.v3
+local _ = CropService -- 확장·2번째 작물 완료 시 재생성에 사용
 
 local PAD_COLORS: { [string]: Color3 } = {
 	Move = Color3.fromRGB(90, 170, 255),
@@ -42,7 +43,7 @@ local function makePad(
 	rt: PlotRuntime,
 	id: string,
 	zone: string,
-	localPos: Vector3,
+	cf: CFrame,
 	color: Color3,
 	parent: Instance
 ): PadRuntime
@@ -50,7 +51,7 @@ local function makePad(
 	local p = Instance.new("Part")
 	p.Name = "Pad_" .. id:gsub(":", "_")
 	p.Size = size
-	p.CFrame = rt.origin * CFrame.new(localPos + Vector3.new(0, Layout.GroundY + size.Y / 2, 0))
+	p.CFrame = cf + Vector3.new(0, size.Y / 2, 0)
 	p.Anchored = true
 	p.CanCollide = false
 	p.CanQuery = false
@@ -66,60 +67,94 @@ local function makePad(
 end
 
 local function buildGate(rt: PlotRuntime, zone: string, list: { PadRuntime })
-	local g = Layout.Gates[zone]
-	if not g then
-		return
-	end
-	local pos = v3(g.pos)
 	local zf = rt.zoneFolders[zone]
-	table.insert(list, makePad(rt, "Gate:" .. zone, zone, pos, PAD_COLORS.Gate, zf))
-	local side = if g.axis == "x" then Vector3.new(0, 0, 3.5) else Vector3.new(3.5, 0, 0)
-	for _, s in { -1, 1 } do
+	local gateCF = PlotService.zoneCFrame(rt, zone, Layout.zoneValue(zone, "Gate"))
+	local pad = makePad(rt, "Gate:" .. zone, zone, gateCF, PAD_COLORS.Gate, rt.folder:FindFirstChild("Hub") or zf)
+	table.insert(list, pad)
+	for _, sgn in { -1, 1 } do
 		PlotService.makePart(
 			"GatePillar",
 			Vector3.new(1.4, 8, 1.4),
-			rt.origin * CFrame.new(pos + side * s + Vector3.new(0, Layout.GroundY + 4, 0)),
+			gateCF * CFrame.new(3.5 * sgn, Layout.GroundY + 4, 0),
 			Color3.fromRGB(120, 120, 130),
+			pad.part.Parent
+		)
+	end
+end
+
+-- 구역 패드: 해금 시 생성 (스탯 3~4종, 확장, 2번째 작물, 일꾼)
+function PadService:BuildZonePads(rt: PlotRuntime, zone: string, data: any)
+	local list = padsByPlot[rt.index]
+	for _, pad in list do
+		if pad.zone == zone and pad.kind ~= "Gate" then
+			return -- 이미 생성됨
+		end
+	end
+	local zdef = Zones.Defs[zone]
+	if zdef.teaser then
+		return
+	end
+	local zf = rt.zoneFolders[zone]
+	for key in Layout.zoneValue(zone, "Pads") do
+		local rel = Layout.zoneValue(zone, "Pads")[key]
+		table.insert(list, makePad(rt, key, zone, PlotService.zoneCFrame(rt, zone, rel), PAD_COLORS[key], zf))
+	end
+	table.insert(
+		list,
+		makePad(
+			rt,
+			"Expand:" .. zone,
+			zone,
+			PlotService.zoneCFrame(rt, zone, Layout.zoneValue(zone, "ExpandPad")),
+			PAD_COLORS.Expand,
 			zf
 		)
+	)
+	if zdef.crops and zdef.crops[2] then
+		local pad = makePad(
+			rt,
+			"Crop2:" .. zone,
+			zone,
+			PlotService.zoneCFrame(rt, zone, Layout.zoneValue(zone, "Crop2Pad")),
+			PAD_COLORS.Crop2,
+			zf
+		)
+		pad.part:SetAttribute("Done", data and PadLogic.info(data, pad.id).maxed or false)
+		table.insert(list, pad)
+	end
+	if zdef.workerMax and zdef.workerMax > 0 then
+		table.insert(
+			list,
+			makePad(
+				rt,
+				"Worker:" .. zone,
+				zone,
+				PlotService.zoneCFrame(rt, zone, Layout.zoneValue(zone, "WorkerPad")),
+				PAD_COLORS.Worker,
+				zf
+			)
+		)
+	end
+end
+
+-- 구역 패드 제거 (플롯 반납 시). 게이트는 유지
+function PadService:ClearZonePads(rt: PlotRuntime)
+	local list = padsByPlot[rt.index]
+	for i = #list, 1, -1 do
+		if list[i].kind ~= "Gate" then
+			table.remove(list, i)
+		end
 	end
 end
 
 local function buildPads(rt: PlotRuntime)
 	local list: { PadRuntime } = {}
+	padsByPlot[rt.index] = list
 	for _, zone in Zones.Order do
-		local zdef = Zones.Defs[zone]
-		local zf = rt.zoneFolders[zone]
 		if zone ~= "Z1" then
 			buildGate(rt, zone, list)
 		end
-		if zdef.teaser then
-			continue
-		end
-		for key in Layout.zoneValue(zone, "Pads") do
-			local pos = Layout.padPos(zone, key)
-			if pos then
-				table.insert(list, makePad(rt, key, zone, v3(pos), PAD_COLORS[key], zf))
-			end
-		end
-		table.insert(
-			list,
-			makePad(rt, "Expand:" .. zone, zone, v3(Layout.pos(zone, "ExpandPad")), PAD_COLORS.Expand, zf)
-		)
-		if zdef.crops and zdef.crops[2] then
-			table.insert(
-				list,
-				makePad(rt, "Crop2:" .. zone, zone, v3(Layout.pos(zone, "Crop2Pad")), PAD_COLORS.Crop2, zf)
-			)
-		end
-		if zdef.workerMax and zdef.workerMax > 0 then
-			table.insert(
-				list,
-				makePad(rt, "Worker:" .. zone, zone, v3(Layout.pos(zone, "WorkerPad")), PAD_COLORS.Worker, zf)
-			)
-		end
 	end
-	padsByPlot[rt.index] = list
 end
 
 local function paidPath(info: PadLogic.PadInfo): string
@@ -186,10 +221,7 @@ local function complete(rt: PlotRuntime, owner: Player, pad: PadRuntime, info: P
 			{ path = "zones." .. info.key, value = true },
 			{ path = "gates." .. info.key, value = 0 },
 		})
-		CropService:BuildZone(rt, info.key, d)
-		Remotes.get("ZoneUnlocked"):FireAllClients({ plot = rt.index, zone = info.key })
-		PlotService:RemoveFog(rt, info.key, 2.2)
-		PadService.ZoneUnlocked:Fire(owner, rt, info.key)
+		PadService.ZoneUnlocked:Fire(owner, rt, info.key) -- ZoneService 가 구역을 생성하고 연출을 보낸다
 	end
 	Remotes.get("PadComplete"):FireClient(owner, { padId = pad.id, level = newLevel })
 	PadService.Completed:Fire(owner, pad.id, newLevel)
@@ -254,28 +286,14 @@ function PadService:Init()
 	end
 end
 
-local function syncDone(rt: PlotRuntime, data: any)
-	for _, pad in padsByPlot[rt.index] or {} do
-		if pad.kind == "Crop2" then
-			pad.part:SetAttribute("Done", data and PadLogic.info(data, pad.id).maxed or false)
-		end
-	end
-end
-
 function PadService:Start()
 	PlotService.Tick:Connect(function(dt)
 		for _, rt in PlotService:Owned() do
 			tickPlot(rt, dt)
 		end
 	end)
-	DataService.Loaded:Connect(function(player, data)
-		local rt = PlotService:GetByPlayer(player)
-		if rt then
-			syncDone(rt, data)
-		end
-	end)
 	PlotService.Released:Connect(function(_p, rt)
-		syncDone(rt, nil)
+		self:ClearZonePads(rt)
 	end)
 end
 

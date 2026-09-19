@@ -13,7 +13,6 @@ export type ZoneDef = {
 	workerMax: number?,
 	hasGrowPad: boolean?,
 	growPadBase: number?,
-	origin: { number },
 	teaser: boolean?,
 }
 
@@ -29,7 +28,6 @@ local Zones: { [string]: ZoneDef } = {
 		workerCost = { 400 },
 		workerMax = 1,
 		hasGrowPad = false,
-		origin = { 0, 0, 0 },
 	},
 	Z2 = {
 		gateCost = 800,
@@ -43,7 +41,6 @@ local Zones: { [string]: ZoneDef } = {
 		workerMax = 1,
 		hasGrowPad = true,
 		growPadBase = 800,
-		origin = { 75, 0, 0 },
 	},
 	Z3 = {
 		gateCost = 8000,
@@ -55,13 +52,11 @@ local Zones: { [string]: ZoneDef } = {
 		expansionCost = { 3000, 5000, 8000, 12000 },
 		workerCost = { 10000, 20000 },
 		workerMax = 2,
-		origin = { 0, 0, 85 },
 	},
 	Z4 = {
 		gateCost = 60000,
 		minLevel = 10,
 		teaser = true,
-		origin = { 75, 0, 85 },
 	},
 }
 

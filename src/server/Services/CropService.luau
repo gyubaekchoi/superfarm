@@ -12,7 +12,6 @@ local Types = require(Shared.Types)
 local Models = require(Shared.Config.Models)
 local Templates = require(Shared.Templates)
 local PlotService = require(script.Parent.PlotService)
-local DataService = require(script.Parent.DataService)
 
 type PlotRuntime = PlotService.PlotRuntime
 type CropState = PlotService.CropState
@@ -69,7 +68,9 @@ local function makeTile(rt: PlotRuntime, zone: string, name: string, centerLocal
 	local tileH = Layout.FieldTileHeight
 	local tile = basePart("Tile_" .. name, rt.zoneFolders[zone])
 	tile.Size = Vector3.new(w, tileH, l)
-	tile.CFrame = rt.origin * CFrame.new(centerLocal + Vector3.new(0, Layout.GroundY + tileH / 2, 0))
+	tile.CFrame = rt.origin
+		* CFrame.new(centerLocal + Vector3.new(0, Layout.GroundY + tileH / 2, 0))
+		* CFrame.Angles(0, Layout.yaw(zone), 0)
 	local theme = Models.ZoneTheme[zone]
 	tile.Color = if theme
 		then Color3.fromRGB(theme.tile[1], theme.tile[2], theme.tile[3])
@@ -90,12 +91,18 @@ local function buildField(
 ): number
 	makeTile(rt, zone, zone .. "_" .. cropId, centerLocal, cols * CELL + 1, rows * CELL + 1)
 	local cropsFolder = rt.zoneFolders[zone]:FindFirstChild("Crops") :: Folder
+	if not cropsFolder then
+		cropsFolder = Instance.new("Folder")
+		cropsFolder.Name = "Crops"
+		cropsFolder.Parent = rt.zoneFolders[zone]
+	end
 	local size = v3(Layout.CropBaseSize)
 	local baseY = Layout.GroundY + Layout.FieldTileHeight
 	local idx = startIdx
+	local rot = CFrame.Angles(0, Layout.yaw(zone), 0)
 	for r = 1, rows do
 		for c = 1, cols do
-			local off = Vector3.new((c - (cols + 1) / 2) * CELL, 0, (r - (rows + 1) / 2) * CELL)
+			local off = rot:VectorToWorldSpace(Vector3.new((c - (cols + 1) / 2) * CELL, 0, (r - (rows + 1) / 2) * CELL))
 			local basePos = rt.origin:PointToWorldSpace(centerLocal + off + Vector3.new(0, baseY, 0))
 			local def = Models.Crops[cropId]
 			local inst: Instance
@@ -140,14 +147,20 @@ local function buildOrchard(
 	makeTile(rt, zone, zone .. "_" .. cropId, centerLocal, cols * S + 2, rows * S + 2)
 	local zf = rt.zoneFolders[zone]
 	local cropsFolder = zf:FindFirstChild("Crops") :: Folder
+	if not cropsFolder then
+		cropsFolder = Instance.new("Folder")
+		cropsFolder.Name = "Crops"
+		cropsFolder.Parent = zf
+	end
 	local def = Crops[cropId]
 	local perTree = def.perTree or 5
 	local idx, treeId = startIdx, treeStart
 	local baseY = Layout.GroundY + Layout.FieldTileHeight
 	local fdef = Models.Crops[cropId]
+	local rot = CFrame.Angles(0, Layout.yaw(zone), 0)
 	for r = 1, rows do
 		for c = 1, cols do
-			local off = Vector3.new((c - (cols + 1) / 2) * S, 0, (r - (rows + 1) / 2) * S)
+			local off = rot:VectorToWorldSpace(Vector3.new((c - (cols + 1) / 2) * S, 0, (r - (rows + 1) / 2) * S))
 			local baseWorld = rt.origin:PointToWorldSpace(centerLocal + off + Vector3.new(0, baseY, 0))
 			local treeName = ("Tree_%s_%d"):format(zone, treeId)
 			local fruitRing, fruitHeight = Layout.FruitRing, Layout.FruitHeight
@@ -326,13 +339,6 @@ function CropService:ReadyNear(rt: PlotRuntime, pos: Vector3, radius: number, zo
 end
 
 function CropService:Start()
-	DataService.Loaded:Connect(function(player, data)
-		local rt = PlotService:GetByPlayer(player)
-		if rt then
-			PlotService:SyncFog(rt, data.zones)
-			self:BuildAll(rt, data)
-		end
-	end)
 	PlotService.Released:Connect(function(_player, rt)
 		self:ClearPlot(rt)
 	end)
