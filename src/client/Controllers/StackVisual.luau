@@ -164,13 +164,22 @@ local function slotCFrame(base: CFrame, i: number, n: number, tilt: Vector2, squ
 	return base * CFrame.Angles(tilt.X * frac, 0, tilt.Y * frac) * CFrame.new(0, y, 0)
 end
 
-local function cropPart(plot: number, zone: string, idx: number): BasePart?
+local function cropInst(plot: number, zone: string, idx: number): (Instance?, Vector3?)
 	local plots = workspace:FindFirstChild("Plots")
 	local pf = plots and plots:FindFirstChild("Plot" .. plot)
 	local zf = pf and pf:FindFirstChild(zone)
 	local cf = zf and zf:FindFirstChild("Crops")
-	local part = cf and cf:FindFirstChild(("Crop_%s_%d"):format(zone, idx))
-	return part :: BasePart?
+	local inst = cf and cf:FindFirstChild(("Crop_%s_%d"):format(zone, idx))
+	if not inst then
+		return nil, nil
+	end
+	if inst:IsA("Model") then
+		local cfm, size = inst:GetBoundingBox()
+		return inst, cfm.Position + Vector3.new(0, size.Y * 0.3, 0)
+	elseif inst:IsA("BasePart") then
+		return inst, inst.Position
+	end
+	return inst, nil
 end
 
 local function standOf(plot: number, zone: string): BasePart?
@@ -186,8 +195,7 @@ local function onHarvest(msg: any)
 	s.cap = msg.cap or s.cap
 	local isLocal = msg.userId == localUserId
 	for i, item in msg.items do
-		local src = cropPart(msg.plot, item.zone, item.idx)
-		local from = src and src.Position
+		local src, from = cropInst(msg.plot, item.zone, item.idx)
 		if src and src:GetAttribute("Tree") then
 			CropVisual:ShakeTree(src)
 		end

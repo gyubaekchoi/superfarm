@@ -57,6 +57,20 @@ function AudioController:Init()
 	local group = Instance.new("SoundGroup")
 	group.Name = "SFX"
 	group.Parent = SoundService
+	if isValid(Assets.BGM) then
+		local music = Instance.new("SoundGroup")
+		music.Name = "Music"
+		music.Volume = 0.35
+		music.Parent = SoundService
+		local bgm = Instance.new("Sound")
+		bgm.Name = "BGM"
+		bgm.SoundId = Assets.BGM
+		bgm.Looped = true
+		bgm.Volume = 0.5
+		bgm.SoundGroup = music
+		bgm.Parent = SoundService
+		bgm:Play()
+	end
 	for i = 1, POOL_SIZE do
 		local s = Instance.new("Sound")
 		s.Name = "Pool" .. i

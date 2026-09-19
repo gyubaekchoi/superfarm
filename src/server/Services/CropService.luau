@@ -9,6 +9,8 @@ local Crops = require(Shared.Config.Crops)
 local Zones = require(Shared.Config.Zones)
 local Pads = require(Shared.Config.Pads)
 local Types = require(Shared.Types)
+local Models = require(Shared.Config.Models)
+local Templates = require(Shared.Templates)
 local PlotService = require(script.Parent.PlotService)
 local DataService = require(script.Parent.DataService)
 
@@ -44,7 +46,7 @@ local function basePart(name: string, parent: Instance): Part
 	return p
 end
 
-local function tagCrop(p: BasePart, zone: string, idx: number, cropId: string)
+local function tagCrop(p: Instance, zone: string, idx: number, cropId: string)
 	p:SetAttribute("Zone", zone)
 	p:SetAttribute("Idx", idx)
 	p:SetAttribute("Crop", cropId)
@@ -68,7 +70,11 @@ local function makeTile(rt: PlotRuntime, zone: string, name: string, centerLocal
 	local tile = basePart("Tile_" .. name, rt.zoneFolders[zone])
 	tile.Size = Vector3.new(w, tileH, l)
 	tile.CFrame = rt.origin * CFrame.new(centerLocal + Vector3.new(0, Layout.GroundY + tileH / 2, 0))
-	tile.Color = Color3.fromRGB(105, 75, 45)
+	local theme = Models.ZoneTheme[zone]
+	tile.Color = if theme
+		then Color3.fromRGB(theme.tile[1], theme.tile[2], theme.tile[3])
+		else Color3.fromRGB(105, 75, 45)
+	tile.Material = Enum.Material.Ground
 	tile.CanQuery = true
 end
 
@@ -91,12 +97,26 @@ local function buildField(
 		for c = 1, cols do
 			local off = Vector3.new((c - (cols + 1) / 2) * CELL, 0, (r - (rows + 1) / 2) * CELL)
 			local basePos = rt.origin:PointToWorldSpace(centerLocal + off + Vector3.new(0, baseY, 0))
-			local part = basePart(("Crop_%s_%d"):format(zone, idx), cropsFolder)
-			part.Size = size
-			part.CFrame = CFrame.new(basePos + Vector3.new(0, size.Y / 2, 0))
-			part.Color = cropColor(cropId)
-			tagCrop(part, zone, idx, cropId)
-			local crop: CropState = { idx = idx, zone = zone, cropId = cropId, pos = basePos, readyAt = 0, part = part }
+			local def = Models.Crops[cropId]
+			local inst: Instance
+			local model = def
+				and Templates.spawn(
+					def.template,
+					CFrame.new(basePos) * CFrame.Angles(0, (r * 7 + c * 13) % 6.28, 0),
+					cropsFolder,
+					("Crop_%s_%d"):format(zone, idx)
+				)
+			if model then
+				inst = model
+			else
+				local part = basePart(("Crop_%s_%d"):format(zone, idx), cropsFolder)
+				part.Size = size
+				part.CFrame = CFrame.new(basePos + Vector3.new(0, size.Y / 2, 0))
+				part.Color = cropColor(cropId)
+				inst = part
+			end
+			tagCrop(inst, zone, idx, cropId)
+			local crop: CropState = { idx = idx, zone = zone, cropId = cropId, pos = basePos, readyAt = 0, inst = inst }
 			table.insert(rt.crops[zone], crop)
 			addToGrid(rt, crop)
 			idx += 1
@@ -105,7 +125,7 @@ local function buildField(
 	return idx
 end
 
--- 과수원 (나무 + 열매)
+-- 과수원 (나무 + 열매). 나무·열매는 템플릿 우선, 없으면 프리미티브
 local function buildOrchard(
 	rt: PlotRuntime,
 	zone: string,
@@ -124,51 +144,76 @@ local function buildOrchard(
 	local perTree = def.perTree or 5
 	local idx, treeId = startIdx, treeStart
 	local baseY = Layout.GroundY + Layout.FieldTileHeight
+	local fdef = Models.Crops[cropId]
 	for r = 1, rows do
 		for c = 1, cols do
 			local off = Vector3.new((c - (cols + 1) / 2) * S, 0, (r - (rows + 1) / 2) * S)
-			local baseLocal = centerLocal + off + Vector3.new(0, baseY, 0)
-			local baseWorld = rt.origin:PointToWorldSpace(baseLocal)
+			local baseWorld = rt.origin:PointToWorldSpace(centerLocal + off + Vector3.new(0, baseY, 0))
+			local treeName = ("Tree_%s_%d"):format(zone, treeId)
+			local fruitRing, fruitHeight = Layout.FruitRing, Layout.FruitHeight
 
-			local tree = Instance.new("Model")
-			tree.Name = ("Tree_%s_%d"):format(zone, treeId)
+			local tree = Templates.spawn(
+				Models.Trees[cropId] or "",
+				CFrame.new(baseWorld) * CFrame.Angles(0, treeId * 1.7, 0),
+				zf,
+				treeName
+			)
+			if tree then
+				local canopy = tree:FindFirstChild("Canopy") :: BasePart?
+				if canopy then
+					fruitRing = canopy.Size.X * 0.42
+					fruitHeight = canopy.Position.Y - baseWorld.Y - canopy.Size.Y * 0.15
+				end
+			else
+				tree = Instance.new("Model")
+				tree.Name = treeName
+				local trunk = basePart("Trunk", tree)
+				trunk.Size = Vector3.new(1.2, 4.5, 1.2)
+				trunk.CFrame = CFrame.new(baseWorld + Vector3.new(0, 2.25, 0))
+				trunk.Color = Color3.fromRGB(110, 70, 40)
+				trunk.CanCollide = true
+				local canopy = basePart("Canopy", tree)
+				canopy.Shape = Enum.PartType.Ball
+				canopy.Size = Vector3.new(5.5, 5.5, 5.5)
+				canopy.CFrame = CFrame.new(baseWorld + Vector3.new(0, Layout.FruitHeight, 0))
+				canopy.Color = Color3.fromRGB(70, 150, 70)
+				tree.PrimaryPart = trunk
+				tree.Parent = zf
+			end
 			tree:SetAttribute("TreeId", treeId)
-			local trunk = basePart("Trunk", tree)
-			trunk.Size = Vector3.new(1.2, 4.5, 1.2)
-			trunk.CFrame = CFrame.new(baseWorld + Vector3.new(0, 2.25, 0))
-			trunk.Color = Color3.fromRGB(110, 70, 40)
-			trunk.CanCollide = true
-			local canopy = basePart("Canopy", tree)
-			canopy.Shape = Enum.PartType.Ball
-			canopy.Size = Vector3.new(5.5, 5.5, 5.5)
-			canopy.CFrame = CFrame.new(baseWorld + Vector3.new(0, Layout.FruitHeight, 0))
-			canopy.Color = Color3.fromRGB(70, 150, 70)
-			tree.PrimaryPart = trunk
-			tree.Parent = zf
 
 			for k = 1, perTree do
-				local a = (k - 1) / perTree * math.pi * 2
+				local a = (k - 1) / perTree * math.pi * 2 + treeId * 0.6
 				local fruitPos = baseWorld
-					+ Vector3.new(
-						math.cos(a) * Layout.FruitRing,
-						Layout.FruitHeight - 1 + (k % 2) * 1.2,
-						math.sin(a) * Layout.FruitRing
+					+ Vector3.new(math.cos(a) * fruitRing, fruitHeight - 0.8 + (k % 2) * 1.1, math.sin(a) * fruitRing)
+				local name = ("Crop_%s_%d"):format(zone, idx)
+				local inst: Instance? = if fdef
+					then Templates.spawn(
+						fdef.template,
+						CFrame.new(fruitPos - Vector3.new(0, Layout.FruitSize / 2, 0)),
+						cropsFolder,
+						name
 					)
-				local fruit = basePart(("Crop_%s_%d"):format(zone, idx), cropsFolder)
-				fruit.Shape = Enum.PartType.Ball
-				fruit.Size = Vector3.new(Layout.FruitSize, Layout.FruitSize, Layout.FruitSize)
-				fruit.CFrame = CFrame.new(fruitPos)
-				fruit.Color = cropColor(cropId)
-				tagCrop(fruit, zone, idx, cropId)
-				fruit:SetAttribute("Tree", true)
-				fruit:SetAttribute("TreeId", treeId)
+					else nil
+				if not inst then
+					local fruit = basePart(name, cropsFolder)
+					fruit.Shape = Enum.PartType.Ball
+					fruit.Size = Vector3.new(Layout.FruitSize, Layout.FruitSize, Layout.FruitSize)
+					fruit.CFrame = CFrame.new(fruitPos)
+					fruit.Color = cropColor(cropId)
+					inst = fruit
+				end
+				local fruitInst = inst :: Instance
+				tagCrop(fruitInst, zone, idx, cropId)
+				fruitInst:SetAttribute("Tree", true)
+				fruitInst:SetAttribute("TreeId", treeId)
 				local crop: CropState = {
 					idx = idx,
 					zone = zone,
 					cropId = cropId,
 					pos = fruitPos,
 					readyAt = 0,
-					part = fruit,
+					inst = fruitInst,
 					treeId = treeId,
 				}
 				table.insert(rt.crops[zone], crop)
@@ -208,7 +253,7 @@ function CropService:BuildZone(rt: PlotRuntime, zone: string, data: Types.Player
 	local now = workspace:GetServerTimeNow()
 	for _, crop in rt.crops[zone] do
 		crop.readyAt = now
-		crop.part:SetAttribute("ReadyAt", now)
+		crop.inst:SetAttribute("ReadyAt", now)
 	end
 end
 
@@ -253,7 +298,7 @@ end
 function CropService:Harvest(_rt: PlotRuntime, crop: CropState, growLevel: number, now: number)
 	local def = Crops[crop.cropId]
 	crop.readyAt = now + def.growSec * Pads.growMult(growLevel)
-	crop.part:SetAttribute("ReadyAt", crop.readyAt)
+	crop.inst:SetAttribute("ReadyAt", crop.readyAt)
 end
 
 -- 위치 주변 Ready 작물 (일꾼·가이드용)

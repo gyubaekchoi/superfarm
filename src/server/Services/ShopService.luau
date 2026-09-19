@@ -69,7 +69,7 @@ function ShopService:Grant(player: Player, key: string): boolean
 			for _, list in rt.crops do
 				for _, crop in list do
 					crop.readyAt = now
-					crop.part:SetAttribute("ReadyAt", now)
+					crop.inst:SetAttribute("ReadyAt", now)
 				end
 			end
 		end

@@ -41,7 +41,7 @@ local function nearestReadyField(rt: PlotRuntime, pos: Vector3): (Instance?, Vec
 				local dist = (crop.pos - pos).Magnitude
 				if dist < bestD then
 					bestD = dist
-					best = crop.part
+					best = crop.inst
 				end
 			end
 		end

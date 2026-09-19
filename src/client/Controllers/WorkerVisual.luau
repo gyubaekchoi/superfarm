@@ -150,7 +150,8 @@ local function update(dt: number)
 		if leg.state == "Harvest" then
 			look = look * CFrame.Angles(0, math.sin(now * 8) * 0.15, 0)
 		end
-		model:PivotTo(CFrame.new(pos + Vector3.new(0, 1.6 + bobY, 0)) * look.Rotation)
+		local lift = if model:GetAttribute("PivotBottom") then 0 else 1.6
+		model:PivotTo(CFrame.new(pos + Vector3.new(0, lift + bobY, 0)) * look.Rotation)
 	end
 end
 

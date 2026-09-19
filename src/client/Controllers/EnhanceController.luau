@@ -101,6 +101,7 @@ local function build()
 	local pc = Instance.new("UICorner")
 	pc.CornerRadius = UDim.new(0, 24)
 	pc.Parent = panel
+	Icon.outline(panel, 3)
 	panel.Parent = gui
 
 	-- 상단: ⚒️ +N
@@ -160,6 +161,7 @@ local function build()
 	local hc = Instance.new("UICorner")
 	hc.CornerRadius = UDim.new(0, 20)
 	hc.Parent = holdBtn
+	Icon.outline(holdBtn, 3)
 	holdRing = Instance.new("Frame")
 	holdRing.Name = "Ring"
 	holdRing.AnchorPoint = Vector2.new(0, 1)

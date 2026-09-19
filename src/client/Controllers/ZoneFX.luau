@@ -14,13 +14,24 @@ ZoneFX.Priority = 30
 local function play(msg: any)
 	local plots = workspace:FindFirstChild("Plots")
 	local pf = plots and plots:FindFirstChild("Plot" .. msg.plot)
-	local fog = pf and pf:FindFirstChild("Fog_" .. msg.zone) :: BasePart?
+	local fog = pf and pf:FindFirstChild("Fog_" .. msg.zone)
+	local fogPivot: Vector3? = nil
 	if fog then
-		TweenService:Create(fog, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Transparency = 1,
-			Size = fog.Size * Vector3.new(1, 0.05, 1),
-			CFrame = fog.CFrame + Vector3.new(0, fog.Size.Y * 0.45, 0),
-		}):Play()
+		local parts = if fog:IsA("Model") then fog:GetDescendants() else { fog }
+		if fog:IsA("Model") then
+			fogPivot = fog:GetPivot().Position
+		elseif fog:IsA("BasePart") then
+			fogPivot = fog.Position
+		end
+		for i, part in parts do
+			if part:IsA("BasePart") then
+				TweenService:Create(part, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+					Transparency = 1,
+					Size = part.Size * Vector3.new(1.3, 1.3, 1.3),
+					CFrame = part.CFrame + Vector3.new(0, 14 + (i % 3) * 4, 0),
+				}):Play()
+			end
+		end
 	end
 	local isMine = msg.plot == Players.LocalPlayer:GetAttribute("Plot")
 	if not isMine or not fog then
@@ -33,7 +44,7 @@ local function play(msg: any)
 	if not cam or not root then
 		return
 	end
-	local target = fog.Position - Vector3.new(0, fog.Size.Y / 2, 0)
+	local target = (fogPivot or root.Position) - Vector3.new(0, 4, 0)
 	local startCF = cam.CFrame
 	cam.CameraType = Enum.CameraType.Scriptable
 	local from = root.Position + Vector3.new(0, 18, 0) + (root.Position - target).Unit * 10

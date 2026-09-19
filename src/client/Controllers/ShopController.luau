@@ -72,6 +72,7 @@ local function card(
 	local c = Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, 16)
 	c.Parent = btn
+	Icon.outline(btn, 3)
 	local list = Instance.new("UIListLayout")
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
@@ -147,6 +148,7 @@ local function build()
 	local pc = Instance.new("UICorner")
 	pc.CornerRadius = UDim.new(0, 24)
 	pc.Parent = panel
+	Icon.outline(panel, 3)
 	panel.Parent = gui
 
 	local function scrollRow(name: string, y: number): Frame
@@ -216,6 +218,7 @@ local function build()
 	local hc = Instance.new("UICorner")
 	hc.CornerRadius = UDim.new(0, 18)
 	hc.Parent = hudBtn
+	Icon.outline(hudBtn, 3)
 	local cart = Icon.new("Shop", 52)
 	cart.AnchorPoint = Vector2.new(0.5, 0.5)
 	cart.Position = UDim2.fromScale(0.5, 0.5)

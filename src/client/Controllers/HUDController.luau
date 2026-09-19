@@ -31,12 +31,13 @@ local function panel(name: string, anchor: Vector2, pos: UDim2): Frame
 	f.AnchorPoint = anchor
 	f.Position = pos
 	f.AutomaticSize = Enum.AutomaticSize.XY
-	f.BackgroundColor3 = Color3.new(0, 0, 0)
-	f.BackgroundTransparency = 0.45
+	f.BackgroundColor3 = Color3.fromRGB(64, 52, 92)
+	f.BackgroundTransparency = 0.15
 	f.BorderSizePixel = 0
 	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, 12)
+	c.CornerRadius = UDim.new(0, 14)
 	c.Parent = f
+	Icon.outline(f, 3)
 	local p = Instance.new("UIPadding")
 	p.PaddingLeft = UDim.new(0, 10)
 	p.PaddingRight = UDim.new(0, 12)

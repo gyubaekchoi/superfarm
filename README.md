@@ -39,6 +39,9 @@ D:Invoke("daily", nil)                   -- 일일 상자 시도
 game.Players.LocalPlayer.PlayerScripts.Debug:Invoke("get")   -- / "stats"
 ```
 
+## 아트 에셋
+`docs/ASSETS.md` 참고. 3D 템플릿은 `ReplicatedStorage/Assets` 에 있으며 **플레이스 파일에 저장**되므로 Studio 에서 Ctrl+S(퍼블리시)를 잊지 말 것. 재생성은 `tools/studio_build_assets.luau`.
+
 ## 출시 전 체크리스트
 1. Roblox 크리에이터 대시보드에서 게임패스 5종·개발자 상품 6종을 만들고 `src/shared/Config/Products.luau` 의 `id` 를 채운다. id 가 0 인 카드는 상점에 🚧 로 표시되고 결제되지 않는다.
 2. 아이콘 PNG(256×256, 플랫, 2px 외곽선) 32종을 업로드해 `Config/Assets.luau` 의 `Icons` 를 채운다. 비어 있으면 이모지로 대체 표시된다.

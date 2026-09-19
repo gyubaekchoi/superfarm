@@ -7,6 +7,8 @@ local Layout = require(Shared.Config.Layout)
 local Zones = require(Shared.Config.Zones)
 local Crops = require(Shared.Config.Crops)
 local Remotes = require(Shared.Remotes)
+local Models = require(Shared.Config.Models)
+local Templates = require(Shared.Templates)
 local PlotService = require(script.Parent.PlotService)
 local CropService = require(script.Parent.CropService)
 local PadService = require(script.Parent.PadService)
@@ -38,6 +40,13 @@ local W = Layout.Worker
 local v3 = PlotService.v3
 
 local function makeModel(rt: PlotRuntime, zone: string, idx: number, pos: Vector3): Model
+	local t = Templates.spawn(Models.Worker, CFrame.new(pos), rt.zoneFolders[zone], ("Worker_%s_%d"):format(zone, idx))
+	if t then
+		t:SetAttribute("Zone", zone)
+		t:SetAttribute("Idx", idx)
+		t:SetAttribute("PivotBottom", true)
+		return t
+	end
 	local m = Instance.new("Model")
 	m.Name = ("Worker_%s_%d"):format(zone, idx)
 	m:SetAttribute("Zone", zone)

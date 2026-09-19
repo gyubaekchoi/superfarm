@@ -5,6 +5,18 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Assets = require(Shared.Config.Assets)
 
 local Icon = {}
+Icon.Font = Enum.Font.FredokaOne
+Icon.LineColor = Color3.fromRGB(52, 40, 70)
+
+-- 두꺼운 외곽선 (패널·버튼)
+function Icon.outline(inst: GuiObject, px: number?, color: Color3?): UIStroke
+	local st = Instance.new("UIStroke")
+	st.Thickness = px or 3
+	st.Color = color or Icon.LineColor
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	st.Parent = inst
+	return st
+end
 
 local function valid(id: string?): boolean
 	return id ~= nil and id ~= "" and not id:match("://0$")
@@ -27,7 +39,7 @@ function Icon.new(name: string, px: number): GuiObject
 	lbl.BackgroundTransparency = 1
 	lbl.Text = Assets.EmojiFallback[name] or "❔"
 	lbl.TextScaled = true
-	lbl.Font = Enum.Font.GothamBold
+	lbl.Font = Icon.Font
 	lbl.TextColor3 = Color3.new(1, 1, 1)
 	return lbl
 end
@@ -40,10 +52,15 @@ function Icon.number(px: number, width: number): TextLabel
 	lbl.BackgroundTransparency = 1
 	lbl.Text = "0"
 	lbl.TextScaled = true
-	lbl.Font = Enum.Font.GothamBlack
+	lbl.Font = Icon.Font
 	lbl.TextColor3 = Color3.new(1, 1, 1)
-	lbl.TextStrokeTransparency = 0.4
+	lbl.TextStrokeTransparency = 1
 	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	local st = Instance.new("UIStroke")
+	st.Thickness = 2.5
+	st.Color = Icon.LineColor
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	st.Parent = lbl
 	return lbl
 end
 

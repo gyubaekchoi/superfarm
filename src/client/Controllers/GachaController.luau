@@ -70,6 +70,7 @@ local function makeButton(iconName: string, px: number): (TextButton, TextLabel)
 	local c = Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, 14)
 	c.Parent = btn
+	Icon.outline(btn, 3)
 	local row = Icon.row("Row", px)
 	row.AnchorPoint = Vector2.new(0.5, 0.5)
 	row.Position = UDim2.fromScale(0.5, 0.5)
@@ -119,6 +120,7 @@ local function build()
 	local pc = Instance.new("UICorner")
 	pc.CornerRadius = UDim.new(0, 24)
 	pc.Parent = panel
+	Icon.outline(panel, 3)
 	panel.Parent = gui
 
 	-- 빛기둥 (상자 뒤)
@@ -251,6 +253,7 @@ local function build()
 	local hc = Instance.new("UICorner")
 	hc.CornerRadius = UDim.new(0, 18)
 	hc.Parent = hudBtn
+	Icon.outline(hudBtn, 3)
 	local gift = Icon.new("Gift", 52)
 	gift.AnchorPoint = Vector2.new(0.5, 0.5)
 	gift.Position = UDim2.fromScale(0.5, 0.5)
