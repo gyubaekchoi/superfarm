@@ -1,0 +1,5 @@
+std = "roblox"
+exclude = ["src/server/Vendor/**", "Packages/**"]
+
+[lints]
+global_usage = "allow"
