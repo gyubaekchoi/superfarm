@@ -104,7 +104,7 @@ local function setupGround()
 	part(
 		"Ground",
 		Vector3.new(900, 2, 900),
-		CFrame.new(0, Layout.GroundY - 1.0, 0),
+		CFrame.new(0, Layout.Y.World - 1, 0),
 		rgb(Models.Ground),
 		Enum.Material.Grass,
 		folder
@@ -140,7 +140,7 @@ local function setupGround()
 		local pth = part(
 			"Path",
 			Vector3.new(Layout.GridSpacing - Layout.PlotSize, 0.4, rows * Layout.GridSpacing),
-			CFrame.new(x, Layout.GroundY + 0.02, 0),
+			CFrame.new(x, Layout.Y.Path - 0.2, 0),
 			rgb(Models.Path),
 			Enum.Material.SmoothPlastic,
 			folder
@@ -151,7 +151,7 @@ local function setupGround()
 		local pth = part(
 			"Path",
 			Vector3.new(Layout.GridCols * Layout.GridSpacing, 0.4, Layout.GridSpacing - Layout.PlotSize),
-			CFrame.new(0, Layout.GroundY + 0.02, 0),
+			CFrame.new(0, Layout.Y.Path - 0.2, 0),
 			rgb(Models.Path),
 			Enum.Material.SmoothPlastic,
 			folder

@@ -7,7 +7,19 @@ local Layout = {
 	PlotSize = 200,
 	GridCols = 3,
 	GridSpacing = 230,
-	GroundY = 0.1,
+	GroundY = 0.1, -- 오브젝트가 놓이는 기준면 (= 플롯 바닥 윗면)
+	-- Y 레이어. 같은 높이의 면이 겹치면 z-fighting(카메라가 움직일 때 바닥이 깜박임)이 생긴다.
+	-- 바닥·판·데칼류는 반드시 아래 값만 사용하고, 새 레이어가 필요하면 여기에 추가한다.
+	Y = {
+		World = 0.0, -- 월드 바닥 윗면 (플롯보다 0.1 낮다)
+		Path = 0.06, -- 플롯 사이 통로
+		Plot = 0.1, -- 플롯 바닥 윗면
+		HubRing = { 0.14, 0.18, 0.22 }, -- 허브 동심원 3겹
+		Zone = 0.16, -- 구역 바닥 윗면
+		Tile = 0.32, -- 밭 타일 윗면 (작물이 이 위에 선다)
+		Ring = 0.40, -- 수확 반경 링
+		Dash = 0.52, -- 가이드 화살표 대시
+	},
 	FieldTileHeight = 0.2,
 	CropSpacing = 4,
 	TreeSpacing = 8,

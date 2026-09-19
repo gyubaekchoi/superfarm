@@ -93,8 +93,8 @@ local function update()
 		hideAll()
 		return
 	end
-	local from = Vector3.new(root.Position.X, Layout.GroundY, root.Position.Z)
-	local to = Vector3.new(pos.X, Layout.GroundY, pos.Z)
+	local from = Vector3.new(root.Position.X, Layout.Y.Dash, root.Position.Z)
+	local to = Vector3.new(pos.X, Layout.Y.Dash, pos.Z)
 	local delta = to - from
 	local dist = delta.Magnitude
 	if dist <= HIDE_DIST then
@@ -109,7 +109,7 @@ local function update()
 		if i <= count then
 			local along = 2 + (i - 1) * SPACING + offset
 			local p = from + dir * along
-			d.CFrame = CFrame.lookAt(p + Vector3.new(0, 0.2, 0), p + dir + Vector3.new(0, 0.2, 0))
+			d.CFrame = CFrame.lookAt(p, p + dir)
 			d.Transparency = 0.15 + 0.6 * (along / dist)
 		else
 			d.Transparency = 1

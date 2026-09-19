@@ -12,6 +12,7 @@ local Layout = require(Shared.Config.Layout)
 local EnhanceLogic = require(Shared.EnhanceLogic)
 local Remotes = require(Shared.Remotes)
 local Colors = require(Shared.Util.Colors)
+local L = require(Shared.Util.L)
 local StateController = require(script.Parent.StateController)
 local AudioController = require(script.Parent.AudioController)
 local HUDController = require(script.Parent.HUDController)
@@ -119,8 +120,13 @@ local function build()
 	top.AnchorPoint = Vector2.new(0.5, 0)
 	top.Position = UDim2.fromScale(0.5, 0.04)
 	local anvil = Icon.new("Anvil", 44)
+	anvil.LayoutOrder = 1
 	anvil.Parent = top
+	local topTitle = Icon.label(L("title.Enhance"), 30)
+	topTitle.LayoutOrder = 2
+	topTitle.Parent = top
 	levelNum = Icon.number(44, 110)
+	levelNum.LayoutOrder = 3
 	levelNum.Parent = top
 	top.Parent = panel
 
@@ -165,7 +171,7 @@ local function build()
 	holdBtn.AutoButtonColor = false
 	holdBtn.AnchorPoint = Vector2.new(0.5, 0)
 	holdBtn.Position = UDim2.fromScale(0.5, 0.66)
-	holdBtn.Size = UDim2.fromOffset(220, 74)
+	holdBtn.Size = UDim2.fromOffset(300, 74)
 	holdBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 60)
 	holdBtn.BorderSizePixel = 0
 	local hc = Instance.new("UICorner")
@@ -187,16 +193,26 @@ local function build()
 	hrow.AnchorPoint = Vector2.new(0.5, 0.5)
 	hrow.Position = UDim2.fromScale(0.5, 0.46)
 	local hIc = Icon.new("Anvil", 40)
+	hIc.LayoutOrder = 1
 	hIc.Parent = hrow
 	local up = Icon.number(40, 30)
 	up.Text = "▲"
+	up.LayoutOrder = 2
 	up.TextColor3 = Color3.fromRGB(60, 40, 10)
 	up.TextStrokeTransparency = 1
 	up.Parent = hrow
 	holdNum = Icon.number(40, 80)
+	holdNum.LayoutOrder = 3
 	holdNum.TextColor3 = Color3.fromRGB(60, 40, 10)
 	holdNum.TextStrokeTransparency = 1
 	holdNum.Parent = hrow
+	local holdCap = Icon.label(L("btn.Enhance"), 30, Color3.fromRGB(60, 40, 10))
+	holdCap.LayoutOrder = 4
+	local hs = holdCap:FindFirstChildOfClass("UIStroke")
+	if hs then
+		hs.Enabled = false
+	end
+	holdCap.Parent = hrow
 	hrow.Parent = holdBtn
 	holdBtn.Parent = panel
 

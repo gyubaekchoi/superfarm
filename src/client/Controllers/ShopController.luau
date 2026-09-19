@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Products = require(Shared.Config.Products)
 local Layout = require(Shared.Config.Layout)
 local Remotes = require(Shared.Remotes)
+local L = require(Shared.Util.L)
 local StateController = require(script.Parent.StateController)
 local AudioController = require(script.Parent.AudioController)
 local Icon = require(script.Parent.UI.Icon)
@@ -159,6 +160,12 @@ local function build()
 	pc.CornerRadius = UDim.new(0, 24)
 	pc.Parent = panel
 	Icon.outline(panel, 3)
+
+	local heading = Icon.label(L("title.Shop"), 28)
+	heading.AnchorPoint = Vector2.new(0, 0)
+	heading.Position = UDim2.fromOffset(24, 12)
+	heading.TextXAlignment = Enum.TextXAlignment.Left
+	heading.Parent = panel
 	panel.Parent = gui
 
 	local function scrollRow(name: string, y: number): Frame

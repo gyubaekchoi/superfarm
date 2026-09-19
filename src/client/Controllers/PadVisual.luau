@@ -1,5 +1,5 @@
 --!strict
--- 패드 빌보드(아이콘 + 💰숫자 + 게이지), 드레인 코인 스트림, 완료 플래시. 로컬 플레이어 플롯만. DevSpec §8-4.
+-- 패드 말풍선(아이콘 + 이름 + 비용 + 게이지), 드레인 코인 스트림, 완료 연출. 로컬 플레이어 플롯만. DevSpec §8-4.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -8,112 +8,59 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PadLogic = require(Shared.PadLogic)
+local Zones = require(Shared.Config.Zones)
 local Remotes = require(Shared.Remotes)
 local Format = require(Shared.Util.Format)
+local L = require(Shared.Util.L)
 local StateController = require(script.Parent.StateController)
 local AudioController = require(script.Parent.AudioController)
 local RadiusVisual = require(script.Parent.RadiusVisual)
-local Icon = require(script.Parent.UI.Icon)
+local Bubble = require(script.Parent.UI.Bubble)
 
 local PadVisual = {}
 PadVisual.Priority = 35
 
-type PadUI = {
-	part: BasePart,
-	id: string,
-	gui: BillboardGui,
-	icon: GuiObject,
-	cost: TextLabel,
-	fill: Frame,
-	costRow: Frame,
-	check: GuiObject,
-	baseColor: Color3,
-}
+type PadUI = { part: BasePart, id: string, zone: string, bubble: Bubble.Bubble, baseColor: Color3 }
 local pads: { [BasePart]: PadUI } = {}
 local localPlayer = Players.LocalPlayer
+
+local COST_OK = Color3.fromRGB(190, 120, 30)
+local COST_LOW = Color3.fromRGB(150, 145, 155)
+local BUBBLE_ON = Color3.fromRGB(255, 252, 245)
+local BUBBLE_OFF = Color3.fromRGB(226, 222, 230)
 
 local function isMine(part: BasePart): boolean
 	return part:GetAttribute("Plot") == localPlayer:GetAttribute("Plot")
 end
 
-local function buildGui(part: BasePart, id: string): PadUI
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "PadGui"
-	gui.Size = UDim2.fromOffset(120, 110)
-	gui.StudsOffset = Vector3.new(0, 3.2, 0)
-	gui.AlwaysOnTop = false
-	gui.LightInfluence = 0
-	gui.MaxDistance = 80
+-- 패드 제목: 아이콘 옆에 함께 표기해 무엇을 사는 패드인지 바로 알게 한다.
+local function titleOf(info: PadLogic.PadInfo): string
+	if info.kind == "Stat" then
+		return L("pad." .. info.key)
+	elseif info.kind == "Expand" then
+		return L("pad.Expand")
+	elseif info.kind == "Crop2" then
+		local crops = Zones.Defs[info.key].crops
+		local second = crops and crops[2]
+		return L("pad.Crop2", second and L("crop." .. second) or "")
+	elseif info.kind == "Worker" then
+		return L("pad.Worker")
+	end
+	return L("pad.Gate", L("zone." .. info.key))
+end
 
-	local list = Instance.new("UIListLayout")
-	list.FillDirection = Enum.FillDirection.Vertical
-	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	list.Padding = UDim.new(0, 4)
-	list.Parent = gui
-
-	local info = PadLogic.info(StateController:Get() :: any, id)
-	local icon = Icon.new(info.icon, 48)
-	icon.LayoutOrder = 1
-	icon.Parent = gui
-
-	local costRow = Icon.row("Cost", 26)
-	costRow.LayoutOrder = 2
-	local coinIc = Icon.new("Coin", 24)
-	coinIc.Parent = costRow
-	local cost = Icon.number(26, 70)
-	cost.Parent = costRow
-	costRow.Parent = gui
-
-	local barBg = Instance.new("Frame")
-	barBg.Name = "Gauge"
-	barBg.LayoutOrder = 3
-	barBg.Size = UDim2.fromOffset(100, 10)
-	barBg.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-	barBg.BorderSizePixel = 0
-	local c1 = Instance.new("UICorner")
-	c1.CornerRadius = UDim.new(1, 0)
-	c1.Parent = barBg
-	local fill = Instance.new("Frame")
-	fill.Size = UDim2.fromScale(0, 1)
-	fill.BackgroundColor3 = Color3.fromRGB(255, 210, 60)
-	fill.BorderSizePixel = 0
-	local c2 = Instance.new("UICorner")
-	c2.CornerRadius = UDim.new(1, 0)
-	c2.Parent = fill
-	fill.Parent = barBg
-	barBg.Parent = gui
-
-	-- 게이트 요구 레벨: ⭐ + 숫자 (레벨 부족일 때만)
-	local levelRow = Icon.row("Level", 22)
-	levelRow.LayoutOrder = 4
-	local starIc = Icon.new("Star", 20)
-	starIc.Parent = levelRow
-	local levelNum = Icon.number(22, 40)
-	levelNum.Parent = levelRow
-	levelRow.Visible = false
-	levelRow.Parent = gui
-
-	local check = Icon.new("Check", 40)
-	check.LayoutOrder = 5
-	check.Visible = false
-	check.Parent = gui
-
-	gui.Parent = part
-	return {
-		part = part,
-		id = id,
-		zone = part:GetAttribute("Zone") :: string,
-		gui = gui,
-		icon = icon,
-		iconName = info.icon,
-		cost = cost,
-		fill = fill,
-		costRow = costRow,
-		levelRow = levelRow,
-		levelNum = levelNum,
-		check = check,
-		baseColor = part.Color,
-	}
+local function badgeOf(info: PadLogic.PadInfo): (string?, Color3?)
+	if info.maxed then
+		return L("pad.Max"), Color3.fromRGB(110, 190, 110)
+	end
+	if info.kind == "Stat" or info.kind == "Expand" then
+		if info.level > 0 then
+			return L("pad.Level", info.level), nil
+		end
+	elseif info.kind == "Worker" and info.level > 0 then
+		return L("pad.Level", info.level), nil
+	end
+	return nil, nil
 end
 
 local function refresh(ui: PadUI, paid: number?, cost: number?)
@@ -125,42 +72,53 @@ local function refresh(ui: PadUI, paid: number?, cost: number?)
 	local done = ui.part:GetAttribute("Done") == true
 	local zoneOpen = PadLogic.zoneOpen(d, ui.id, ui.zone)
 	if done or not zoneOpen then
-		ui.gui.Enabled = false
+		ui.bubble:setEnabled(false)
 		ui.part.Transparency = if done then 1 else 0
 		return
 	end
 	ui.part.Transparency = 0
-	ui.gui.Enabled = true
-	-- 아이콘이 상태에 따라 바뀌는 패드(게이트 🔒/🔓/🚧)
-	if info.icon ~= ui.iconName then
-		ui.icon:Destroy()
-		ui.icon = Icon.new(info.icon, 48)
-		ui.icon.LayoutOrder = 1
-		ui.icon.Parent = ui.gui
-		ui.iconName = info.icon
-	end
-	ui.levelRow.Visible = not info.levelOk
-	ui.levelNum.Text = tostring(info.minLevel)
+	ui.bubble:setEnabled(true)
+	ui.bubble:setHeader(info.icon, titleOf(info))
+	local badgeText, badgeColor = badgeOf(info)
+	ui.bubble:setBadge(badgeText, badgeColor)
+
+	local costRow, costText = ui.bubble:row("Cost", 1, "Coin")
+	local reqRow, reqText = ui.bubble:row("Req", 2, "Lock")
+	local fill = ui.bubble:gauge(3)
+
 	if info.maxed then
-		ui.costRow.Visible = false
-		ui.fill.Parent.Visible = false
-		ui.check.Visible = true
+		costRow.Visible = false
+		reqRow.Visible = false
+		fill.Parent.Visible = false
+		ui.bubble:setColor(BUBBLE_ON)
 		ui.part.Color = ui.baseColor:Lerp(Color3.new(1, 1, 1), 0.5)
 		return
 	end
+
+	local payable = PadLogic.canPay(info)
 	local p = paid or info.paid
 	local c = cost or info.cost or 1
-	ui.costRow.Visible = true
-	ui.fill.Parent.Visible = true
-	ui.check.Visible = false
-	ui.cost.Text = Format.short(math.max(0, c - p))
-	ui.fill.Size = UDim2.fromScale(math.clamp(p / c, 0, 1), 1)
-	-- 결제 가능하면 밝게, 조건 미달(레벨/티저)이면 회색
-	local affordable = PadLogic.canPay(info) and d.coins >= (c - p)
-	ui.cost.TextColor3 = if affordable
-		then Color3.fromRGB(255, 240, 150)
-		elseif not PadLogic.canPay(info) then Color3.fromRGB(140, 140, 140)
-		else Color3.fromRGB(200, 200, 200)
+	local remaining = math.max(0, c - p)
+
+	costRow.Visible = true
+	costText.Text = Format.short(remaining)
+	local affordable = payable and d.coins >= remaining
+	costText.TextColor3 = if affordable then COST_OK else COST_LOW
+
+	if info.teaser then
+		reqRow.Visible = true
+		ui.bubble:setHeader("Construction", titleOf(info))
+		reqText.Text = L("req.Soon")
+	elseif not info.levelOk then
+		reqRow.Visible = true
+		reqText.Text = L("req.Level", info.minLevel)
+	else
+		reqRow.Visible = false
+	end
+
+	fill.Parent.Visible = p > 0
+	fill.Size = UDim2.fromScale(math.clamp(p / c, 0, 1), 1)
+	ui.bubble:setColor(if payable then BUBBLE_ON else BUBBLE_OFF)
 end
 
 local function refreshAll()
@@ -180,12 +138,24 @@ local function track(part: BasePart)
 		return
 	end
 	local id = part:GetAttribute("PadId") :: string
-	local ui = buildGui(part, id)
+	local bubble = Bubble.new(part, 3.4)
+	bubble.gui.Parent = part
+	local ui: PadUI = {
+		part = part,
+		id = id,
+		zone = part:GetAttribute("Zone") :: string,
+		bubble = bubble,
+		baseColor = part.Color,
+	}
 	pads[part] = ui
 	part:GetAttributeChangedSignal("Done"):Connect(function()
 		refresh(ui)
 	end)
+	part.Destroying:Connect(function()
+		pads[part] = nil
+	end)
 	refresh(ui)
+	bubble:pop()
 end
 
 local function byId(id: string): { PadUI }
@@ -252,39 +222,33 @@ local function completeFX(ui: PadUI)
 	task.delay(0.35, function()
 		part.Material = Enum.Material.SmoothPlastic
 	end)
-	local scale = ui.icon:FindFirstChildOfClass("UIScale")
-	if not scale then
-		scale = Instance.new("UIScale")
-		scale.Parent = ui.icon
-	end
-	scale.Scale = 1.5
-	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-		:Play()
+	ui.bubble:pop()
 	AudioController:Play("PadComplete", 1, 0.6)
 	if ui.id == "Harvest" then
 		RadiusVisual:Pulse()
 	end
 end
 
-function PadVisual:Start()
+local function trackTagged()
 	for _, inst in CollectionService:GetTagged("Pad") do
 		if inst:IsA("BasePart") then
 			track(inst)
 		end
 	end
+end
+
+function PadVisual:Start()
+	trackTagged()
 	CollectionService:GetInstanceAddedSignal("Pad"):Connect(function(inst)
 		if inst:IsA("BasePart") then
 			track(inst)
 		end
 	end)
-	localPlayer:GetAttributeChangedSignal("Plot"):Connect(function()
-		for _, inst in CollectionService:GetTagged("Pad") do
-			if inst:IsA("BasePart") then
-				track(inst)
-			end
-		end
+	localPlayer:GetAttributeChangedSignal("Plot"):Connect(trackTagged)
+	StateController.Loaded:Connect(function()
+		trackTagged()
+		refreshAll()
 	end)
-	StateController.Loaded:Connect(refreshAll)
 	StateController.Changed:Connect(function(path: string)
 		if
 			path == "coins"
@@ -317,7 +281,7 @@ function PadVisual:Start()
 		end
 	end)
 	RunService.Heartbeat:Connect(function()
-		-- 게이지는 서버 진행 이벤트가 담당. 여기서는 빌보드 거리 페이드만.
+		-- 게이지·색은 서버 이벤트가 갱신한다. 여기서는 새로 생긴 패드만 주워담는다.
 	end)
 end
 

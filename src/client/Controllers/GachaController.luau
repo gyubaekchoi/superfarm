@@ -11,6 +11,7 @@ local Gacha = require(Shared.Config.Gacha)
 local Layout = require(Shared.Config.Layout)
 local Remotes = require(Shared.Remotes)
 local Colors = require(Shared.Util.Colors)
+local L = require(Shared.Util.L)
 local StateController = require(script.Parent.StateController)
 local AudioController = require(script.Parent.AudioController)
 local HUDController = require(script.Parent.HUDController)
@@ -69,12 +70,12 @@ local function setWalk(enabled: boolean)
 	end
 end
 
-local function makeButton(iconName: string, px: number): (TextButton, TextLabel)
+local function makeButton(iconName: string, px: number, caption: string): (TextButton, TextLabel)
 	local btn = Instance.new("TextButton")
 	btn.Name = "Btn_" .. iconName
 	btn.Text = ""
 	btn.AutoButtonColor = true
-	btn.Size = UDim2.fromOffset(150, px + 16)
+	btn.Size = UDim2.fromOffset(196, px + 16)
 	btn.BackgroundColor3 = Color3.fromRGB(255, 200, 60)
 	btn.BorderSizePixel = 0
 	local c = Instance.new("UICorner")
@@ -86,10 +87,18 @@ local function makeButton(iconName: string, px: number): (TextButton, TextLabel)
 	row.Position = UDim2.fromScale(0.5, 0.5)
 	local ic = Icon.new(iconName, px)
 	ic.Parent = row
-	local num = Icon.number(px, 70)
+	local num = Icon.number(px, 54)
+	num.LayoutOrder = 2
 	num.TextColor3 = Color3.fromRGB(60, 40, 10)
 	num.TextStrokeTransparency = 1
 	num.Parent = row
+	local cap = Icon.label(caption, px - 8, Color3.fromRGB(60, 40, 10))
+	cap.LayoutOrder = 3
+	local capStroke = cap:FindFirstChildOfClass("UIStroke")
+	if capStroke then
+		capStroke.Enabled = false
+	end
+	cap.Parent = row
 	row.Parent = btn
 	return btn, num
 end
@@ -131,6 +140,11 @@ local function build()
 	pc.CornerRadius = UDim.new(0, 24)
 	pc.Parent = panel
 	Icon.outline(panel, 3)
+
+	local heading = Icon.label(L("title.Gacha"), 30)
+	heading.AnchorPoint = Vector2.new(0.5, 0)
+	heading.Position = UDim2.fromScale(0.5, 0.035)
+	heading.Parent = panel
 	panel.Parent = gui
 
 	-- 빛기둥 (상자 뒤)
@@ -183,10 +197,10 @@ local function build()
 	if brl then
 		brl.Padding = UDim.new(0, 16)
 	end
-	ticketBtn, ticketNum = makeButton("Ticket", 36)
+	ticketBtn, ticketNum = makeButton("Ticket", 36, L("btn.Draw"))
 	ticketBtn.LayoutOrder = 1
 	ticketBtn.Parent = btnRow
-	stoneBtn, stoneNum = makeButton("Stone", 36)
+	stoneBtn, stoneNum = makeButton("Stone", 36, L("btn.Draw"))
 	stoneBtn.LayoutOrder = 2
 	stoneBtn.BackgroundColor3 = Color3.fromRGB(120, 200, 255)
 	stoneBtn.Parent = btnRow

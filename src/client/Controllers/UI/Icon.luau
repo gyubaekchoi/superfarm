@@ -64,6 +64,26 @@ function Icon.number(px: number, width: number): TextLabel
 	return lbl
 end
 
+-- 제목/설명 글자. 아이콘 옆이나 패널 상단에 쓴다.
+function Icon.label(text: string, px: number, color: Color3?): TextLabel
+	local lbl = Instance.new("TextLabel")
+	lbl.Name = "Label"
+	lbl.AutomaticSize = Enum.AutomaticSize.X
+	lbl.Size = UDim2.fromOffset(0, px)
+	lbl.BackgroundTransparency = 1
+	lbl.Font = Icon.Font
+	lbl.TextSize = px
+	lbl.TextColor3 = color or Color3.new(1, 1, 1)
+	lbl.TextXAlignment = Enum.TextXAlignment.Center
+	lbl.Text = text
+	local st = Instance.new("UIStroke")
+	st.Thickness = 2
+	st.Color = Icon.LineColor
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	st.Parent = lbl
+	return lbl
+end
+
 -- 가로 배치 컨테이너
 function Icon.row(name: string, px: number): Frame
 	local f = Instance.new("Frame")

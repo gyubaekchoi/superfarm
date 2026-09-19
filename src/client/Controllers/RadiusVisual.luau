@@ -74,8 +74,7 @@ function RadiusVisual:Start()
 		local char = Players.LocalPlayer.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if root then
-			ring.CFrame = CFrame.new(root.Position.X, Layout.GroundY + 0.06, root.Position.Z)
-				* CFrame.Angles(0, 0, math.pi / 2)
+			ring.CFrame = CFrame.new(root.Position.X, Layout.Y.Ring, root.Position.Z) * CFrame.Angles(0, 0, math.pi / 2)
 			ring.Transparency = math.min(ring.Transparency, 0.95)
 		else
 			ring.CFrame = CFrame.new(0, -100, 0)

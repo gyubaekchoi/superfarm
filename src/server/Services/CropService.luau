@@ -97,7 +97,7 @@ local function buildField(
 		cropsFolder.Parent = rt.zoneFolders[zone]
 	end
 	local size = v3(Layout.CropBaseSize)
-	local baseY = Layout.GroundY + Layout.FieldTileHeight
+	local baseY = Layout.Y.Tile -- 타일 윗면
 	local idx = startIdx
 	local rot = CFrame.Angles(0, Layout.yaw(zone), 0)
 	for r = 1, rows do
@@ -155,7 +155,7 @@ local function buildOrchard(
 	local def = Crops[cropId]
 	local perTree = def.perTree or 5
 	local idx, treeId = startIdx, treeStart
-	local baseY = Layout.GroundY + Layout.FieldTileHeight
+	local baseY = Layout.Y.Tile -- 타일 윗면
 	local fdef = Models.Crops[cropId]
 	local rot = CFrame.Angles(0, Layout.yaw(zone), 0)
 	for r = 1, rows do

@@ -191,20 +191,21 @@ local function buildHub(rt: PlotRuntime)
 	local hub = Instance.new("Folder")
 	hub.Name = "Hub"
 	hub.Parent = rt.folder
-	local function ring(name, radius, y, color)
+	local RING_THICK = 0.3
+	local function ring(name, radius, top, color)
 		local f = makePart(
 			name,
-			Vector3.new(0.3, radius * 2, radius * 2),
-			rt.origin * CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			Vector3.new(RING_THICK, radius * 2, radius * 2),
+			rt.origin * CFrame.new(0, top - RING_THICK / 2, 0) * CFrame.Angles(0, 0, math.pi / 2),
 			color,
 			hub
 		)
 		f.Shape = Enum.PartType.Cylinder
 		f.CanCollide = false
 	end
-	ring("Floor", H.Radius, Layout.GroundY - 0.1, rgb(Models.PlazaFloor))
-	ring("Ring1", H.Radius * 0.66, Layout.GroundY - 0.08, Color3.fromRGB(226, 206, 160))
-	ring("Ring2", H.Radius * 0.33, Layout.GroundY - 0.06, rgb(Models.PlazaFloor))
+	ring("Floor", H.Radius, Layout.Y.HubRing[1], rgb(Models.PlazaFloor))
+	ring("Ring1", H.Radius * 0.66, Layout.Y.HubRing[2], Color3.fromRGB(226, 206, 160))
+	ring("Ring2", H.Radius * 0.33, Layout.Y.HubRing[3], rgb(Models.PlazaFloor))
 	for i = 1, H.Lamps do
 		local a = i / H.Lamps * math.pi * 2 + math.pi / H.Lamps
 		local pos = Vector3.new(math.cos(a), 0, math.sin(a)) * (H.Radius - 3)
@@ -267,7 +268,8 @@ function PlotService:BuildZone(rt: PlotRuntime, zone: string)
 	local floor = makePart(
 		"ZoneFloor",
 		fsize,
-		PlotService.zoneCFrame(rt, zone, Layout.zoneValue(zone, "FloorCenter")) + Vector3.new(0, 0.01, 0),
+		PlotService.zoneCFrame(rt, zone, Layout.zoneValue(zone, "FloorCenter"))
+			+ Vector3.new(0, Layout.Y.Zone - fsize.Y / 2 - Layout.GroundY, 0),
 		if theme then rgb(theme.floor) else Color3.fromRGB(120, 190, 90),
 		zf
 	)
@@ -284,6 +286,7 @@ function PlotService:BuildZone(rt: PlotRuntime, zone: string)
 		zf
 	)
 	stand:SetAttribute("Zone", zone)
+	CollectionService:AddTag(stand, "Interact")
 	rt.sellStands[zone] = stand
 	local tname = Models.Stands[zone]
 	if tname and Templates.has(tname) then

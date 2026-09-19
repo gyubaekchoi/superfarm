@@ -13,7 +13,7 @@ rojo serve             # Studio의 Rojo 플러그인에서 Connect (localhost:34
 ```bash
 lune run tests/run             # 단위 테스트 (Stats·Enhance·Gacha·PadLogic·Format·Util)
 lune run tools/sim 60 1        # 60분 경제 시뮬레이터 (분, seed, [cheapRatio])
-lune run tools/check_no_text   # 클라 UI 텍스트 금지 린트 (숫자·아이콘·기호만 허용)
+lune run tools/check_no_text   # UI 글자 린트 (하드코딩 문장 금지, Strings ko/en 키 짝 검사)
 stylua src tests && selene src # 포맷 + 린트
 ```
 
@@ -38,6 +38,11 @@ D:Invoke("daily", nil)                   -- 일일 상자 시도
 -- 클라
 game.Players.LocalPlayer.PlayerScripts.Debug:Invoke("get")   -- / "stats"
 ```
+
+## 다국어
+UI 문장은 `src/shared/Config/Strings.luau` 의 `ko` / `en` 표에만 둔다. 코드에서는 `L("pad.Move")` 로 가져온다.
+한국어 로케일은 ko, 그 외는 en 을 그리고 **Roblox 자동 번역**이 en 을 각 언어로 옮긴다.
+→ 크리에이터 대시보드 → Localization 에서 소스 언어를 English 로 두고 자동 번역을 켤 것.
 
 ## 아트 에셋
 `docs/ASSETS.md` 참고. 3D 템플릿은 `ReplicatedStorage/Assets` 에 있으며 **플레이스 파일에 저장**되므로 Studio 에서 Ctrl+S(퍼블리시)를 잊지 말 것. 재생성은 `tools/studio_build_assets.luau`.
