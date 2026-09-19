@@ -114,8 +114,12 @@ def icon_noentry(d, img):
 def icon_arrow(d, img):
     poly(d, [(30, 96), (140, 96), (140, 46), (230, 128), (140, 210), (140, 160), (30, 160)], GOLD)
 def icon_hand(d, img):
-    c = (255, 210, 170, 255)
-    rrect(d, [70, 130, 190, 230], 30, c); rrect(d, [108, 20, 150, 150], 20, c); rrect(d, [150, 90, 188, 150], 18, c); rrect(d, [72, 100, 110, 150], 18, c)
+    # 탭 안내: 손 모양 대신 커서 점 + 파동 링 (제스처로 오해될 여지 없음)
+    c = (255, 210, 90, 255)
+    d.ellipse([28, 28, 228, 228], outline=LINE, width=LW)
+    d.ellipse([64, 64, 192, 192], outline=LINE, width=LW)
+    circle(d, 128, 128, 34, c)
+    gloss(img, 128, 128, 34)
 def icon_construction(d, img):
     poly(d, [(128, 24), (236, 220), (20, 220)], (255, 180, 40, 255)); d.line([(128, 90), (128, 160)], fill=LINE, width=LW + 6); circle(d, 128, 190, 10, LINE)
 def icon_field(d, img):
